@@ -496,7 +496,16 @@ db.ref('live').on('value', (snapshot) => {
   STATE.activeGuestId = data.activeGuestId || null;
   STATE.dialogLog = data.dialogLog || {};
   const s = getSession();
-  if(s && s.role === 'guest') renderGuestLive();
+  
+  // 👇 ВРЕМЕННЫЙ ДЕБАГ
+  console.log("🔥 Firebase live обновился!");
+  console.log("Роль:", s ? s.role : 'нет');
+  console.log("Пришло сообщений:", Object.keys(STATE.dialogLog).length);
+  
+  if (s) {
+    if (s.role === 'guest') renderGuestLive();
+    if (s.role === 'admin') renderAdminTrain();
+  }
 });
 db.ref('queue').on('value', (snapshot) => {
   const data = snapshot.val();
