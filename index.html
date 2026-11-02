@@ -83,6 +83,10 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .err-close-block{background:#1e293b;border:2px solid var(--accent);border-radius:10px;padding:12px;margin-top:12px;box-shadow:0 4px 12px rgba(56,189,248,0.2)}
 .err-close-block h3{color:var(--accent);margin:0 0 8px 0;font-size:14px}
+.grade-btns{display:flex;gap:8px;margin-top:10px;}
+.grade-btns button{padding:4px 12px;font-size:12px;}
+.grade-btn.active-ok{background:var(--ok);color:#052e16;}
+.grade-btn.active-err{background:var(--err);color:#fff;}
 </style>
 </head>
 <body>
@@ -163,6 +167,7 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 <div class="linker-col"><h4>Подстатус</h4><div id="linkerSub"></div></div>
 </div>
 </div>
+<button class="ok" id="guestSendLinker" style="margin-top:20px; width:100%;">Отправить связи на проверку</button>
 </div>
 </section>
 
@@ -186,19 +191,7 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 </div>
 </div>
 </div>
-<div id="matchOtherPicker" class="hidden">
-  <div class="row" style="justify-content:space-between;margin-bottom:10px;">
-    <h3 style="margin:0;font-size:16px;color:var(--text);text-transform:none;">Прочие статусы</h3>
-    <button class="ghost small" id="matchBackBtnOther">← К статусам</button>
-  </div>
-  <div class="linker-wrap" style="margin-top:14px">
-    <svg id="svgLayerOther" class="layer"></svg>
-    <div class="linker-grid" style="grid-template-columns: 1fr 1fr;">
-      <div class="linker-col"><h4>Статусы</h4><div id="matchOtherLeft"></div></div>
-      <div class="linker-col"><h4>Описания (перемешаны)</h4><div id="matchOtherRight"></div></div>
-    </div>
-  </div>
-</div>
+<button class="ok" id="guestSendMatch" style="margin-top:20px; width:100%;">Отправить соединения на проверку</button>
 </div>
 </section>
 
@@ -206,7 +199,7 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 <div class="card">
 <h2>🔍 Проверка ошибок</h2>
 <div id="guestErrorsView"></div>
-<button class="ok" id="guestSendAllBtn" style="margin-top:20px; width:100%;">Отправить ВСЁ на проверку</button>
+<button class="ok" id="guestSendErrors" style="margin-top:20px; width:100%;">Отправить ошибки на проверку</button>
 </div>
 </section>
 </div>
@@ -280,204 +273,14 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 
 <section class="page" id="aP3">
 <div class="card">
-<h2>📊 Результаты (Реальное время)</h2>
+<h2>📊 Результаты и проверка</h2>
 <select id="resultsGuestSelect" style="margin-bottom:12px"></select>
 <div id="resultsBody"></div>
 <button class="primary" id="resetAll" style="margin-top:16px">Сбросить всё</button>
 </div>
 </section>
 </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><script>
-// ТВОИ КЛЮЧИ FIREBASE
-const firebaseConfig = {
-  apiKey: "AIzaSyBDRyFFcWc0taMpnhgChG73ffn8Rnm2KHU",
-  authDomain: "rio-trainer.firebaseapp.com",
-  databaseURL: "https://rio-trainer-default-rtdb.firebaseio.com",
-  projectId: "rio-trainer",
-  storageBucket: "rio-trainer.firebasestorage.app",
-  messagingSenderId: "261174011762",
-  appId: "1:261174011762:web:febc066f498089b14fdfeb"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const ADMIN_PASS = 'ORIOpRaKtIkA';
-
-const FULL_STATUSES = [
-  { label: 'Не принято', bgColor:'#9e2a2b', txtColor:'#ffffff', subs: [], desc: 'Не принято' },
-  { label: 'Перезвон от М', bgColor:'#b1a59a', txtColor:'#000000', subs: [], desc: 'Перезвон от мастера' },
-  { label: 'Перезвон где М', bgColor:'#a3889b', txtColor:'#000000', subs: [], desc: 'Перезвон где мастер' },
-  { label: 'Не заказ', bgColor:'#7b8b9e', txtColor:'#ffffff', subs: [], desc: 'Не заказ' },
-  { label: 'Стоп-фактор', bgColor:'#1e5bbd', txtColor:'#ffffff', subs: [
-    {label:'Вне зоны', desc:'клиент находится вне зоны выезда по карте'},
-    {label:'Время', desc:'клиент хочет мастера в нерабочее время'},
-    {label:'Проблемный КЛ', desc:'пьяный, несовершеннолетний'},
-    {label:'Фикс цены', desc:'ограниченный бюджет'},
-    {label:'Адрес', desc:'ошибка с городом'},
-    {label:'Скупка', desc:'продажа/покупка техники'},
-    {label:'Акт', desc:'акт технического заключения'},
-    {label:'Тип (БЫТ)', desc:'плазм ТВ, пром ХД'},
-    {label:'Тип (МНЧ)', desc:'уличные работы'},
-    {label:'Возраст', desc:'ХД старше 30 лет'},
-    {label:'Корпус', desc:'корпусные работы'},
-    {label:'Прочее', desc:'другая причина'}
-  ]},
-  { label: 'Спам', bgColor:'#551a8b', txtColor:'#ffffff', subs: [
-    {label:'Ошибся', desc:'ошибся номером'},
-    {label:'Реклама', desc:'реклама'},
-    {label:'Вакансия', desc:'ищет работу'},
-    {label:'Листовки', desc:'жалоба'},
-    {label:'Подрядчик', desc:'бригадир'},
-    {label:'Спам', desc:'хулиганство'},
-    {label:'Прочее', desc:'другое'}
-  ]},
-  { label: 'Перенос', bgColor:'#794828', txtColor:'#ffffff', subs: [], desc: 'Перенос заказа' },
-  { label: 'Отмена', bgColor:'#404040', txtColor:'#ffffff', subs: [
-    {label:'Другой М', desc:'наши другого мастера'},
-    {label:'Сами', desc:'сами починили'},
-    {label:'Заработало', desc:'техника заработала'},
-    {label:'Купят новую', desc:'купят новую технику'},
-    {label:'Отзывы', desc:'не нравятся отзывы'},
-    {label:'Планы', desc:'изменились планы'},
-    {label:'Без причины', desc:'передумали'}
-  ]},
-  { label: 'Принято', bgColor:'#2e7d5e', txtColor:'#ffffff', subs: [], desc: 'Принято' },
-  { label: 'На прозвон', bgColor:'#a3a9b0', txtColor:'#000000', subs: [], desc: 'На прозвон' },
-  { label: 'Город не берёт', bgColor:'#3b72a3', txtColor:'#ffffff', subs: [], desc: 'Город не берёт' },
-  { label: 'Игнор', bgColor:'#a36b1e', txtColor:'#ffffff', subs: [], desc: 'Игнор' },
-  { label: 'Принято по гарантии', bgColor:'#c2a332', txtColor:'#ffffff', subs: [], desc: 'Принято по гарантии' },
-  { label: 'Упущенный заказ', bgColor:'#cc0000', txtColor:'#ffffff', subs: [], desc: 'Упущенный заказ' },
-  { label: 'Дубль', bgColor:'#5c6a7b', txtColor:'#ffffff', subs: [
-    {label:'КЛ уточнял', desc:'входящий звонок'},
-    {label:'Дисп уточнял', desc:'исходящий звонок'},
-    {label:'Миссклик', desc:'случайно создал'},
-    {label:'Прочее', desc:'другое'}
-  ]}
-];
-
-const DEFAULT_CHATS = [
-  {
-    id: 'c1',
-    messages: [
-      {who: 'client', text: 'Здравствуйте! Когда будет мастер? Должен быть еще 30 мин назад'},
-      {who: 'operator', text: 'Здравствуйте! Уточните контактный телефон с которого вы обращались'},
-      {who: 'client', text: '89990991122'}
-    ],
-    options: ['Уточнить телефон', 'Напарник к вам уже выехал, ожидайте пожалуйста', 'Отменить заказ'],
-    correct: 1,
-    correctStatus: 'Стоп-фактор',
-    correctSub: 'Время'
-  }
-];
-
-const DEFAULT_ERROR_TESTS = [
-  {
-    id: 'e1',
-    chat: [
-      {who:'client', text:'Мне нужен ремонт стиральной машины'},
-      {who:'operator', text:'Здравствуйте, а что именно случилось?'},
-      {who:'client', text:'Не сливает воду'},
-      {who:'operator', text:'Укажите бренд и примерный возраст техники'},
-      {who:'client', text:'Midea, лет 10 примерно'},
-      {who:'operator', text:'Отлично, укажите адрес с номером квартиры и контактный телефон, для связи'},
-      {who:'client', text:'Казань, ул Горсоветская, д 29, кв 37'},
-      {who:'operator', text:'До встречи, буду я или мой напарник'}
-    ],
-    status: 'Принято',
-    sub: '',
-    adminErrors: ['Не уточнил адрес', 'Не уточнил модель техники', 'Не уточнил возраст техники', 'Не сказал клиенту про время выезда'],
-    operatorAnswers: null
-  }
-];
-
-const DEFAULT_STATE = {
-  queue: [], activeGuestId: null,
-  chats: structuredClone(DEFAULT_CHATS),
-  guestCheckChatId: null, guestCheckSelectedOption: null, guestCheckSelectedStatus: null, guestCheckSelectedSub: null, guestCheckResult: null,
-  statuses: structuredClone(FULL_STATUSES),
-  dialogLog: [], guestLiveSelectedStatus: null, guestLiveSelectedSub: null, guestLiveResult: null, dialogActive: true,
-  linker: {
-    client: [
-      {text:'Здравствуйте, нужна бригада из 3 человек, объем работ большой'},
-      {text:'Здравствуйте, когда будет мастер? Он должен быть еще 40 мин назад'},
-      {text:'Здравствуйте. Надо поменять батареи чугунные, нужна сварка, можете помочь?'},
-      {text:'Здравствуйте. Отмените встречу, к нам мастер из ук уже приехал'},
-      {text:'Здравствуйте. Мне нужна диагностика стиральной машинки, ремонт не планирую'}
-    ],
-    answer: [
-      {text:'Здравствуйте. Ожидайте связи пожалуйста, напарник уже выехал к вам'},
-      {text:'Здравствуйте, извините, но такими работами не занимаюсь'},
-      {text:'Здравствуйте. Хорошо, встречу тогда отменяю, давайте вам после наберу'},
-      {text:'Здравствуйте. Не смогу вам помочь, извините, занимаюсь только ремонтом'},
-      {text:'Здравствуйте, не смогу вам помочь, извините'}
-    ],
-    status: [
-      {text:'Перезвон где М'},
-      {text:'Стоп-фактор'},
-      {text:'Отмена'},
-      {text:'Спам'},
-      {text:'Не заказ'}
-    ],
-    sub: [
-      {text:'Подрядчик'},
-      {text:'Тип (МНЧ)'},
-      {text:'Другой М'},
-      {text:'Ошибся'},
-      {text:'Возраст'}
-    ],
-    links: [],
-    adminLinks: []
-  },
-  matchLinks: {}, matchRightOrder: {}, matchCurrentStatus: null, matchOtherStatus: null, matchOtherRightOrder: [],
-  errorTests: structuredClone(DEFAULT_ERROR_TESTS),
-  results: []
-};
-
-let STATE = structuredClone(DEFAULT_STATE);
-let fbResults = [];
-
-const $=id=>document.getElementById(id);
-const now=()=>new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const uid=()=>'g'+Math.random().toString(36).slice(2,9);
-
-function getSession(){try{return JSON.parse(localStorage.getItem('trainer_session')||'null');}catch{return null;}}
-function setSession(s){localStorage.setItem('trainer_session',JSON.stringify(s));}
-function clearSession(){localStorage.removeItem('trainer_session');}
-
-// ==========================================
-// FIREBASE СИНХРОНИЗАЦИЯ
-// ==========================================
-db.ref('results').on('value', (snapshot) => {
-  const data = snapshot.val();
-  fbResults = data ? Object.values(data) : [];
-  
-  const s = getSession();
-  if(s && s.role === 'admin'){
-    renderResults();
-  }
-});
-
-function sendResultToFirebase(resultData) {
-  const session = getSession();
-  if(!session) return;
-  
-  const key = Date.now() + '_' + Math.random().toString(36).slice(2,5);
-  resultData.guestId = session.id;
-  resultData.guestName = session.name;
-  
-  db.ref('results/' + key).set(resultData).then(() => {
-    console.log("Отправлено");
-  }).catch((err) => {
-    alert("Ошибка: " + err.message);
-  });
-}
-
-$('roleSelect').onchange=()=>{const r=$('roleSelect').value;$('guestFields').classList.toggle('hidden',r!=='guest');$('adminFields').classList.toggle('hidden',r!=='admin');};
+</div>$('roleSelect').onchange=()=>{const r=$('roleSelect').value;$('guestFields').classList.toggle('hidden',r!=='guest');$('adminFields').classList.toggle('hidden',r!=='admin');};
 $('roleSelect').onchange();
 
 $('loginBtn').onclick=()=>{
@@ -496,10 +299,7 @@ $('loginBtn').onclick=()=>{
   }
 };
 
-$('guestLogout').onclick=()=>{
-  clearSession();
-  route();
-};
+$('guestLogout').onclick=()=>{clearSession();route();};
 $('adminLogout').onclick=()=>{clearSession();route();};
 
 function route(){
@@ -512,7 +312,9 @@ function route(){
 }
 
 document.querySelectorAll('#guestTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#guestTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#guestView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});
-document.querySelectorAll('#adminTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#adminTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#adminView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});function renderGuest(s){
+document.querySelectorAll('#adminTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#adminTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#adminView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});
+
+function renderGuest(s){
   $('guestName').textContent=s.name;
   renderGuestCheck();
   renderGuestLive();
@@ -718,6 +520,22 @@ function handleLinkerClick(col,idx){
   linkerSel=null;
   renderGuestLinker();
 }
+$('guestSendLinker').onclick=()=>{
+  const links = STATE.linker.links.map(l => {
+    const fromText = STATE.linker[l.from][l.fromIdx].text;
+    const toText = STATE.linker[l.to][l.toIdx].text;
+    return { from: fromText, to: toText };
+  });
+  if(!links.length){alert('Вы не соединили ни одной пары');return;}
+  sendResultToFirebase({
+    type: 'Лист со связями',
+    taskTitle: 'Связи',
+    answer: JSON.stringify(links),
+    status: '—',
+    sub: '—',
+    ts: now()
+  });
+};
 
 let matchSel=null;
 function renderGuestMatch(){
@@ -875,6 +693,34 @@ document.addEventListener('click', e=>{
   }
 });
 
+$('guestSendMatch').onclick=()=>{
+  let results = [];
+  // Собираем обычные статусы
+  for(let statusLabel in STATE.matchLinks){
+    if(statusLabel === 'other') continue;
+    STATE.matchLinks[statusLabel].forEach(l => {
+      results.push({ status: statusLabel, sub: l.sub, correct: l.correct });
+    });
+  }
+  // Собираем "прочие"
+  if(STATE.matchLinks['other']){
+    STATE.matchLinks['other'].forEach(l => {
+      results.push({ status: l.sub, sub: '—', correct: l.correct });
+    });
+  }
+  
+  if(!results.length){alert('Вы ничего не соединили');return;}
+  
+  sendResultToFirebase({
+    type: 'Соединение',
+    taskTitle: 'Соединение',
+    answer: JSON.stringify(results),
+    status: '—',
+    sub: '—',
+    ts: now()
+  });
+};
+
 function drawArrows(svgId){
   const svg=$(svgId);svg.innerHTML='';
   const wrap=svg.parentElement.getBoundingClientRect();
@@ -1001,7 +847,6 @@ function renderGuestErrors(){
             <h3>Найденные ошибки</h3>
             <div>${adminErrsHtml}</div>
             ${opErrsHtml}
-            ${!isDone ? `<button class="ok" data-send-errors="${chatIdx}" style="margin-top:16px; width:100%;">Отправить результат</button>` : '<div class="feedback ok">Вы уже отправили.</div>'}
           </div>
         </div>
       </div>
@@ -1025,33 +870,41 @@ function renderGuestErrors(){
       document.querySelector(`input[data-custom-desc="${chatIdx}"]`).value = '';
     };
   });
+}
 
-  document.querySelectorAll('[data-send-errors]').forEach(b => {
-    b.onclick = () => {
-      const chatIdx = +b.dataset.sendErrors;
-      const et = STATE.errorTests[chatIdx];
-      const selectedErrors = [];
-      document.querySelectorAll(`input[data-chat="${chatIdx}"][data-admin-err]`).forEach(inp => {
-        if(inp.checked) selectedErrors.push(`admin_${inp.dataset.adminErr}`);
-      });
-      et.operatorAnswers = { selectedErrors, customErrors: window.tempCustomErrors[chatIdx] || [] };
-      
-      let answerText = 'Выбрано ошибок: ' + selectedErrors.length;
-      if (et.operatorAnswers.customErrors.length > 0) answerText += ' | Свои: ' + et.operatorAnswers.customErrors.map(e=>e.title).join(', ');
-      
-      sendResultToFirebase({
-        type: 'Проверка ошибок',
-        taskTitle: 'Задание ' + (chatIdx+1),
-        answer: answerText,
-        status: et.status,
-        sub: et.sub,
-        ts: now()
-      });
-      
-      renderGuestErrors();
-    };
+$('guestSendErrors').onclick=()=>{
+  let payload = [];
+  STATE.errorTests.forEach((et, idx) => {
+    const selectedErrors = [];
+    document.querySelectorAll(`input[data-chat="${idx}"][data-admin-err]`).forEach(inp => {
+      if(inp.checked) selectedErrors.push(`admin_${inp.dataset.adminErr}`);
+    });
+    et.operatorAnswers = { selectedErrors, customErrors: window.tempCustomErrors[idx] || [] };
+    
+    let answerText = 'Выбрано ошибок: ' + selectedErrors.length;
+    if (et.operatorAnswers.customErrors.length > 0) answerText += ' | Свои: ' + et.operatorAnswers.customErrors.map(e=>e.title).join(', ');
+    
+    payload.push({
+      taskTitle: 'Задание ' + (idx+1),
+      answer: answerText,
+      status: et.status,
+      sub: et.sub
+    });
   });
-}/* =============================================================
+  
+  if(!payload.length){alert('Нет заданий');return;}
+  
+  sendResultToFirebase({
+    type: 'Проверка ошибок',
+    taskTitle: 'Все ошибки',
+    answer: JSON.stringify(payload),
+    status: '—',
+    sub: '—',
+    ts: now()
+  });
+  
+  renderGuestErrors();
+};/* =============================================================
    АДМИН
    ============================================================= */
 function renderAdmin(){
@@ -1328,25 +1181,59 @@ function renderResults(){
     const card = document.createElement('div');
     card.className = 'result-card';
     card.innerHTML = `<h3 style="margin-top:0;">Оператор: <b>${esc(guestName)}</b></h3>`;
+    
     grouped[guestName].forEach(r => {
       const item = document.createElement('div');
       item.className = 'result-task';
+      
+      const key = Object.keys(fbResults).find(k => fbResults[k] === r);
+      const grade = adminGrades[key];
+      
+      let answerHtml = '';
+      if(r.type === 'Лист со связями') {
+         const links = JSON.parse(r.answer);
+         answerHtml = links.map(l => `<div>${esc(l.from)} ➔ ${esc(l.to)}</div>`).join('');
+      } else if (r.type === 'Соединение') {
+         const links = JSON.parse(r.answer);
+         answerHtml = links.map(l => `<div>${esc(l.status)} / ${esc(l.sub)} - ${l.correct ? '✓' : '✕'}</div>`).join('');
+      } else {
+         answerHtml = esc(r.answer);
+      }
+
+      const gradeBtns = `
+        <div class="grade-btns">
+          <button class="grade-btn ${grade === true ? 'active-ok' : ''}" data-grade-key="${key}" data-grade-val="true">Верно ✓</button>
+          <button class="grade-btn ${grade === false ? 'active-err' : ''}" data-grade-key="${key}" data-grade-val="false">Неверно ✕</button>
+        </div>
+      `;
+
       item.innerHTML = `
         <div><b>${esc(r.taskTitle)}</b> <span class="hint">(${r.ts})</span></div>
         <div style="margin-top:6px;">Статус: <span class="status-pill">${esc(r.status||'—')}</span> ${r.sub?` <span class="status-pill sub">${esc(r.sub)}</span>`:''}</div>
-        <div style="margin-top:6px;">Ответ оператора: <pre>${esc(r.answer)}</pre></div>
+        <div style="margin-top:6px; padding:10px; background:#0f172a; border-radius:6px;"><pre>${answerHtml}</pre></div>
+        ${r.type !== 'Live' ? gradeBtns : ''}
       `;
       card.appendChild(item);
     });
     box.appendChild(card);
   }
+
+  document.querySelectorAll('[data-grade-key]').forEach(b => {
+    b.onclick = () => {
+      const key = b.dataset.gradeKey;
+      const val = b.dataset.gradeVal === 'true';
+      gradeResult(key, val);
+    };
+  });
 }
 
 $('resetAll').onclick=()=>{
   if(!confirm('Сбросить ВСЁ, включая все задания и статусы?'))return;
   STATE=structuredClone(DEFAULT_STATE);
   fbResults = [];
+  adminGrades = {};
   db.ref('results').remove();
+  db.ref('grades').remove();
   clearSession();
   route();
 };
