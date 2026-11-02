@@ -548,7 +548,14 @@ $('loginBtn').onclick=()=>{
   }
 };
 
-$('guestLogout').onclick=()=>{clearSession();route();};
+$('guestLogout').onclick=()=>{
+  const s = getSession();
+  if (s && s.role === 'guest') {
+    db.ref('queue/' + s.id).remove();
+  }
+  clearSession();
+  route();
+};
 $('adminLogout').onclick=()=>{clearSession();route();};
 
 function route(){
@@ -714,22 +721,28 @@ $('guestSendReply').onclick=()=>{
   const t=$('guestReplyInput').value.trim();
   if(!t)return;
   
-  // Ищем в объекте сообщение клиента без ответа
+  // Ищем последнее сообщение, на которое ещё нет ответа
   let targetKey = null;
   const log = STATE.dialogLog || {};
+  
   if (!Array.isArray(log)) {
-    const keys = Object.keys(log).sort((a,b) => (log[a].ts||'').localeCompare(log[b].ts||''));
+    const keys = Object.keys(log);
     for (let i = keys.length - 1; i >= 0; i--) {
       const k = keys[i];
-      if (log[k].clientMsg && !log[k].answer) { targetKey = k; break; }
+      // Проверяем, что это сообщение от админа и на него еще не ответили
+      if (log[k].clientMsg && !log[k].answer) { 
+        targetKey = k; 
+        break; 
+      }
     }
   }
   
   if (targetKey) {
-    // 👇 Пишем ответ в Firebase
+    // Пишем ответ в Firebase
     db.ref('live/dialogLog/' + targetKey + '/answer').set(t);
     db.ref('live/dialogLog/' + targetKey + '/ats').set(now());
   } else {
+    // Если не нашли сообщение клиента (например, оператор пишет первым), создаем новую запись
     db.ref('live/dialogLog').push({clientMsg:null, answer:t, ats:now(), ts:now()});
   }
   $('guestReplyInput').value='';
