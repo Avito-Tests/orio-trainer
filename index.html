@@ -1176,8 +1176,19 @@ function renderQueue(){
     b.className=isActive?'primary':'ghost';
     b.textContent=`${g.first} ${g.last}` + (isActive ? ' (выбран)' : '');
     b.onclick=()=>{
-      if(isActive){STATE.activeGuestId=null;}
-      else{STATE.activeGuestId=g.id;STATE.dialogLog=[];STATE.guestLiveSelectedStatus=null;STATE.guestLiveSelectedSub=null;STATE.guestLiveResult=null;STATE.dialogActive=true;}
+      if(isActive){
+        db.ref('live').remove();       // снять выбор + очистить диалог
+        STATE.activeGuestId=null;
+      } else {
+        STATE.activeGuestId=g.id;
+        STATE.dialogLog=[];
+        STATE.guestLiveSelectedStatus=null;
+        STATE.guestLiveSelectedSub=null;
+        STATE.guestLiveResult=null;
+        STATE.dialogActive=true;
+        // 👇 пишем в Firebase, с кем работаем + пустой диалог
+        db.ref('live').set({activeGuestId: g.id, dialogLog: []});
+      }
       renderAdmin();
     };
     list.appendChild(b);
