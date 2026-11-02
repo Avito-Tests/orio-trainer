@@ -491,6 +491,12 @@ db.ref('grades').on('value', (snapshot) => {
   const s = getSession();
   if(s && s.role === 'admin') renderResults();
 });
+db.ref('queue').on('value', (snapshot) => {
+  const data = snapshot.val();
+  STATE.queue = data ? Object.values(data) : [];
+  const s = getSession();
+  if(s && s.role === 'admin') renderQueue();
+});
 
 function sendResultToFirebase(resultData) {
   const session = getSession();
@@ -523,6 +529,10 @@ $('loginBtn').onclick=()=>{
     if(!f||!l){$('loginError').textContent='Введите имя и фамилию.';return;}
     const id=uid();
     setSession({role:'guest',id,name:f+' '+l,since:Date.now()});
+    // 👇 регистрация в очереди Firebase
+    db.ref('queue/'+id).set({id, first:f, last:l, since:Date.now()});
+    // при закрытии/обновлении страницы — удалить из очереди
+    db.ref('queue/'+id).onDisconnect().remove();
     route();
   }else{
     if($('adminPass').value!==ADMIN_PASS){$('loginError').textContent='Неверный пароль.';return;}
