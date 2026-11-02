@@ -280,7 +280,203 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 </div>
 </section>
 </div>
-</div>$('roleSelect').onchange=()=>{const r=$('roleSelect').value;$('guestFields').classList.toggle('hidden',r!=='guest');$('adminFields').classList.toggle('hidden',r!=='admin');};
+</div><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBDRyFFcWc0taMpnhgChG73ffn8Rnm2KHU",
+  authDomain: "rio-trainer.firebaseapp.com",
+  databaseURL: "https://rio-trainer-default-rtdb.firebaseio.com",
+  projectId: "rio-trainer",
+  storageBucket: "rio-trainer.firebasestorage.app",
+  messagingSenderId: "261174011762",
+  appId: "1:261174011762:web:febc066f498089b14fdfeb"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const ADMIN_PASS = 'ORIOpRaKtIkA';
+
+const FULL_STATUSES = [
+  { label: 'Не принято', bgColor:'#9e2a2b', txtColor:'#ffffff', subs: [], desc: 'Не принято' },
+  { label: 'Перезвон от М', bgColor:'#b1a59a', txtColor:'#000000', subs: [], desc: 'Перезвон от мастера' },
+  { label: 'Перезвон где М', bgColor:'#a3889b', txtColor:'#000000', subs: [], desc: 'Перезвон где мастер' },
+  { label: 'Не заказ', bgColor:'#7b8b9e', txtColor:'#ffffff', subs: [], desc: 'Не заказ' },
+  { label: 'Стоп-фактор', bgColor:'#1e5bbd', txtColor:'#ffffff', subs: [
+    {label:'Вне зоны', desc:'клиент находится вне зоны выезда по карте'},
+    {label:'Время', desc:'клиент хочет мастера в нерабочее время'},
+    {label:'Проблемный КЛ', desc:'пьяный, несовершеннолетний'},
+    {label:'Фикс цены', desc:'ограниченный бюджет'},
+    {label:'Адрес', desc:'ошибка с городом'},
+    {label:'Скупка', desc:'продажа/покупка техники'},
+    {label:'Акт', desc:'акт технического заключения'},
+    {label:'Тип (БЫТ)', desc:'плазм ТВ, пром ХД'},
+    {label:'Тип (МНЧ)', desc:'уличные работы'},
+    {label:'Возраст', desc:'ХД старше 30 лет'},
+    {label:'Корпус', desc:'корпусные работы'},
+    {label:'Прочее', desc:'другая причина'}
+  ]},
+  { label: 'Спам', bgColor:'#551a8b', txtColor:'#ffffff', subs: [
+    {label:'Ошибся', desc:'ошибся номером'},
+    {label:'Реклама', desc:'реклама'},
+    {label:'Вакансия', desc:'ищет работу'},
+    {label:'Листовки', desc:'жалоба'},
+    {label:'Подрядчик', desc:'бригадир'},
+    {label:'Спам', desc:'хулиганство'},
+    {label:'Прочее', desc:'другое'}
+  ]},
+  { label: 'Перенос', bgColor:'#794828', txtColor:'#ffffff', subs: [], desc: 'Перенос заказа' },
+  { label: 'Отмена', bgColor:'#404040', txtColor:'#ffffff', subs: [
+    {label:'Другой М', desc:'наши другого мастера'},
+    {label:'Сами', desc:'сами починили'},
+    {label:'Заработало', desc:'техника заработала'},
+    {label:'Купят новую', desc:'купят новую технику'},
+    {label:'Отзывы', desc:'не нравятся отзывы'},
+    {label:'Планы', desc:'изменились планы'},
+    {label:'Без причины', desc:'передумали'}
+  ]},
+  { label: 'Принято', bgColor:'#2e7d5e', txtColor:'#ffffff', subs: [], desc: 'Принято' },
+  { label: 'На прозвон', bgColor:'#a3a9b0', txtColor:'#000000', subs: [], desc: 'На прозвон' },
+  { label: 'Город не берёт', bgColor:'#3b72a3', txtColor:'#ffffff', subs: [], desc: 'Город не берёт' },
+  { label: 'Игнор', bgColor:'#a36b1e', txtColor:'#ffffff', subs: [], desc: 'Игнор' },
+  { label: 'Принято по гарантии', bgColor:'#c2a332', txtColor:'#ffffff', subs: [], desc: 'Принято по гарантии' },
+  { label: 'Упущенный заказ', bgColor:'#cc0000', txtColor:'#ffffff', subs: [], desc: 'Упущенный заказ' },
+  { label: 'Дубль', bgColor:'#5c6a7b', txtColor:'#ffffff', subs: [
+    {label:'КЛ уточнял', desc:'входящий звонок'},
+    {label:'Дисп уточнял', desc:'исходящий звонок'},
+    {label:'Миссклик', desc:'случайно создал'},
+    {label:'Прочее', desc:'другое'}
+  ]}
+];
+
+const DEFAULT_CHATS = [
+  {
+    id: 'c1',
+    messages: [
+      {who: 'client', text: 'Здравствуйте! Когда будет мастер? Должен быть еще 30 мин назад'},
+      {who: 'operator', text: 'Здравствуйте! Уточните контактный телефон с которого вы обращались'},
+      {who: 'client', text: '89990991122'}
+    ],
+    options: ['Уточнить телефон', 'Напарник к вам уже выехал, ожидайте пожалуйста', 'Отменить заказ'],
+    correct: 1,
+    correctStatus: 'Стоп-фактор',
+    correctSub: 'Время'
+  }
+];
+
+const DEFAULT_ERROR_TESTS = [
+  {
+    id: 'e1',
+    chat: [
+      {who:'client', text:'Мне нужен ремонт стиральной машины'},
+      {who:'operator', text:'Здравствуйте, а что именно случилось?'},
+      {who:'client', text:'Не сливает воду'},
+      {who:'operator', text:'Укажите бренд и примерный возраст техники'},
+      {who:'client', text:'Midea, лет 10 примерно'},
+      {who:'operator', text:'Отлично, укажите адрес с номером квартиры и контактный телефон, для связи'},
+      {who:'client', text:'Казань, ул Горсоветская, д 29, кв 37'},
+      {who:'operator', text:'До встречи, буду я или мой напарник'}
+    ],
+    status: 'Принято',
+    sub: '',
+    adminErrors: ['Не уточнил адрес', 'Не уточнил модель техники', 'Не уточнил возраст техники', 'Не сказал клиенту про время выезда'],
+    operatorAnswers: null
+  }
+];
+
+const DEFAULT_STATE = {
+  queue: [], activeGuestId: null,
+  chats: structuredClone(DEFAULT_CHATS),
+  guestCheckChatId: null, guestCheckSelectedOption: null, guestCheckSelectedStatus: null, guestCheckSelectedSub: null, guestCheckResult: null,
+  statuses: structuredClone(FULL_STATUSES),
+  dialogLog: [], guestLiveSelectedStatus: null, guestLiveSelectedSub: null, guestLiveResult: null, dialogActive: true,
+  linker: {
+    client: [
+      {text:'Здравствуйте, нужна бригада из 3 человек, объем работ большой'},
+      {text:'Здравствуйте, когда будет мастер? Он должен быть еще 40 мин назад'},
+      {text:'Здравствуйте. Надо поменять батареи чугунные, нужна сварка, можете помочь?'},
+      {text:'Здравствуйте. Отмените встречу, к нам мастер из ук уже приехал'},
+      {text:'Здравствуйте. Мне нужна диагностика стиральной машинки, ремонт не планирую'}
+    ],
+    answer: [
+      {text:'Здравствуйте. Ожидайте связи пожалуйста, напарник уже выехал к вам'},
+      {text:'Здравствуйте, извините, но такими работами не занимаюсь'},
+      {text:'Здравствуйте. Хорошо, встречу тогда отменяю, давайте вам после наберу'},
+      {text:'Здравствуйте. Не смогу вам помочь, извините, занимаюсь только ремонтом'},
+      {text:'Здравствуйте, не смогу вам помочь, извините'}
+    ],
+    status: [
+      {text:'Перезвон где М'},
+      {text:'Стоп-фактор'},
+      {text:'Отмена'},
+      {text:'Спам'},
+      {text:'Не заказ'}
+    ],
+    sub: [
+      {text:'Подрядчик'},
+      {text:'Тип (МНЧ)'},
+      {text:'Другой М'},
+      {text:'Ошибся'},
+      {text:'Возраст'}
+    ],
+    links: [],
+    adminLinks: []
+  },
+  matchLinks: {}, matchRightOrder: {}, matchCurrentStatus: null, matchOtherStatus: null, matchOtherRightOrder: [],
+  errorTests: structuredClone(DEFAULT_ERROR_TESTS),
+  results: []
+};
+
+let STATE = structuredClone(DEFAULT_STATE);
+let fbResults = [];
+let adminGrades = {};
+
+const $=id=>document.getElementById(id);
+const now=()=>new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>'g'+Math.random().toString(36).slice(2,9);
+
+function getSession(){try{return JSON.parse(localStorage.getItem('trainer_session')||'null');}catch{return null;}}
+function setSession(s){localStorage.setItem('trainer_session',JSON.stringify(s));}
+function clearSession(){localStorage.removeItem('trainer_session');}
+
+// ==========================================
+// FIREBASE СИНХРОНИЗАЦИЯ
+// ==========================================
+db.ref('results').on('value', (snapshot) => {
+  const data = snapshot.val();
+  fbResults = data ? Object.values(data) : [];
+  const s = getSession();
+  if(s && s.role === 'admin') renderResults();
+});
+
+db.ref('grades').on('value', (snapshot) => {
+  adminGrades = snapshot.val() || {};
+  const s = getSession();
+  if(s && s.role === 'admin') renderResults();
+});
+
+function sendResultToFirebase(resultData) {
+  const session = getSession();
+  if(!session) return;
+  const key = Date.now() + '_' + Math.random().toString(36).slice(2,5);
+  resultData.guestId = session.id;
+  resultData.guestName = session.name;
+  db.ref('results/' + key).set(resultData).then(() => {
+    alert("Результат отправлен на проверку!");
+  }).catch((err) => {
+    alert("Ошибка: " + err.message);
+  });
+}
+
+function gradeResult(resultKey, isCorrect) {
+  db.ref('grades/' + resultKey).set(isCorrect);
+}
+
+// ==========================================
+// ВХОД И РОУТИНГ
+// ==========================================
+$('roleSelect').onchange=()=>{const r=$('roleSelect').value;$('guestFields').classList.toggle('hidden',r!=='guest');$('adminFields').classList.toggle('hidden',r!=='admin');};
 $('roleSelect').onchange();
 
 $('loginBtn').onclick=()=>{
@@ -314,6 +510,9 @@ function route(){
 document.querySelectorAll('#guestTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#guestTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#guestView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});
 document.querySelectorAll('#adminTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#adminTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#adminView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});
 
+// ==========================================
+// ОПЕРАТОР
+// ==========================================
 function renderGuest(s){
   $('guestName').textContent=s.name;
   renderGuestCheck();
@@ -695,17 +894,15 @@ document.addEventListener('click', e=>{
 
 $('guestSendMatch').onclick=()=>{
   let results = [];
-  // Собираем обычные статусы
   for(let statusLabel in STATE.matchLinks){
     if(statusLabel === 'other') continue;
     STATE.matchLinks[statusLabel].forEach(l => {
       results.push({ status: statusLabel, sub: l.sub, correct: l.correct });
     });
   }
-  // Собираем "прочие"
   if(STATE.matchLinks['other']){
     STATE.matchLinks['other'].forEach(l => {
-      results.push({ status: l.sub, sub: '—', correct: l.correct });
+      results.push({ status: l         results.push({ status: l.sub, sub: '—', correct: l.correct });
     });
   }
   
@@ -904,7 +1101,9 @@ $('guestSendErrors').onclick=()=>{
   });
   
   renderGuestErrors();
-};/* =============================================================
+};
+
+/* =============================================================
    АДМИН
    ============================================================= */
 function renderAdmin(){
@@ -1180,7 +1379,7 @@ function renderResults(){
   for(const guestName in grouped) {
     const card = document.createElement('div');
     card.className = 'result-card';
-    card.innerHTML = `<h3 style="margin-top:0;">Оператор: <b>${esc(guestName)}</b></h3>`;
+        card.innerHTML = `<h3 style="margin-top:0;">Оператор: <b>${esc(guestName)}</b></h3>`;
     
     grouped[guestName].forEach(r => {
       const item = document.createElement('div');
@@ -1191,11 +1390,15 @@ function renderResults(){
       
       let answerHtml = '';
       if(r.type === 'Лист со связями') {
-         const links = JSON.parse(r.answer);
-         answerHtml = links.map(l => `<div>${esc(l.from)} ➔ ${esc(l.to)}</div>`).join('');
+         try {
+           const links = JSON.parse(r.answer);
+           answerHtml = links.map(l => `<div>${esc(l.from)} ➔ ${esc(l.to)}</div>`).join('');
+         } catch(e) { answerHtml = esc(r.answer); }
       } else if (r.type === 'Соединение') {
-         const links = JSON.parse(r.answer);
-         answerHtml = links.map(l => `<div>${esc(l.status)} / ${esc(l.sub)} - ${l.correct ? '✓' : '✕'}</div>`).join('');
+         try {
+           const links = JSON.parse(r.answer);
+           answerHtml = links.map(l => `<div>${esc(l.status)} / ${esc(l.sub)} - ${l.correct ? '✓' : '✕'}</div>`).join('');
+         } catch(e) { answerHtml = esc(r.answer); }
       } else {
          answerHtml = esc(r.answer);
       }
