@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тренажёр оператора (Firebase)</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--accent:#38bdf8;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b;--text:#e2e8f0;--muted:#94a3b8;--line:#334155}
+*{box-sizing:border-box;font-family:system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+h1{font-size:20px;margin:0 0 14px}h2{font-size:16px;margin:0 0 10px}
+h3{font-size:13px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.wrap{max-width:1200px;margin:0 auto}
+.card{background:var(--card);border-radius:14px;padding:18px;margin-bottom:16px;border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+button{cursor:pointer;border-radius:9px;font-size:14px;border:1px solid var(--line);background:transparent;color:var(--text);padding:10px 16px;transition:.15s}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#0f172a;font-weight:600;border-color:var(--accent)}
+button.danger{background:var(--err);color:#fff;border-color:var(--err);font-weight:600}
+button.ok{background:var(--ok);color:#052e16;border-color:var(--ok);font-weight:600}
+button.ghost{background:#0f172a}
+button.small{padding:6px 10px;font-size:12px}
+button:disabled{opacity:.4;cursor:not-allowed}
+input[type=text],input[type=password],select,textarea{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:#0f172a;color:var(--text);font-size:14px;font-family:inherit}
+textarea{resize:vertical;min-height:60px}
+label.small{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.badge.guest{background:#1e3a8a;color:#bfdbfe}.badge.admin{background:#7c2d12;color:#fed7aa}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding:10px;background:#0b1220;border-radius:10px;border:1px solid var(--line)}
+.msg{max-width:78%;padding:9px 13px;border-radius:13px;font-size:14px;line-height:1.4}
+.msg.client{align-self:flex-start;background:#334155;border-bottom-left-radius:4px}
+.msg.operator{align-self:flex-end;background:#0369a1;border-bottom-right-radius:4px}
+.msg .label{font-size:10px;color:var(--muted);display:block;margin-bottom:3px}
+.msg .time{font-size:10px;color:var(--muted);display:block;margin-top:3px;text-align:right}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:10px 16px;border-radius:9px;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:13px;transition:.15s}
+.tab.active{background:var(--accent);color:#0f172a;font-weight:600;border-color:var(--accent)}
+.page{display:none}.page.active{display:block}
+.status-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.status-btn{padding:9px 13px;border-radius:9px;cursor:pointer;border:1px solid #475569;background:transparent;color:var(--text);font-size:13px}
+.status-btn.selected{border-width:2px}
+.option{padding:11px;border-radius:9px;cursor:pointer;background:#0f172a;border:1px solid #475569;color:var(--text);font-size:14px;text-align:left;display:block;width:100%;margin-bottom:6px}
+.option.correct{background:#052e16;border-color:var(--ok)}
+.option:disabled{opacity:.6;cursor:default}
+.queue-item{display:flex;align-items:center;gap:10px;padding:10px;background:#0b1220;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;font-size:14px}
+.queue-item .who{flex:1}
+.chat-edit-box{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.chat-edit-box .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.msg-edit-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.msg-edit-row select{width:110px}.msg-edit-row input{flex:1}
+.opt-edit-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.opt-edit-row input{flex:1}
+.opt-edit-row label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.status-edit-box{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.status-edit-box .head{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.status-edit-box .head input{flex:1}
+.sub-list{display:flex;flex-direction:column;gap:6px;margin-left:12px}
+.sub-row{display:flex;gap:6px;align-items:center}
+.sub-row input{flex:1}
+.linker-wrap{position:relative;min-height:200px}
+.linker-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:20px;position:relative}
+@media(max-width:1024px){.linker-grid{grid-template-columns:1fr 1fr;gap:16px}}
+@media(max-width:600px){.linker-grid{grid-template-columns:1fr}}
+.linker-col{display:flex;flex-direction:column;gap:8px}
+.linker-col h4{margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase}
+.linker-item{padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:#0b1220;cursor:pointer;font-size:13px;line-height:1.4;position:relative}
+.linker-item:hover{border-color:var(--accent)}
+.linker-item.selected{border-color:var(--warn);background:#3b2d0a}
+.linker-item .idx{position:absolute;top:-8px;left:-8px;width:22px;height:22px;background:var(--accent);color:#0f172a;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.linker-item .del{position:absolute;top:6px;right:8px;color:var(--err);font-weight:700;cursor:pointer;font-size:12px}
+svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;height:100%}
+.status-pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.result-card{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.result-task{background:#1e293b;border-radius:8px;padding:10px;margin-top:8px}
+.result-task pre{white-space:pre-wrap;word-break:break-all;font-family:inherit;margin:0;color:var(--text);margin-top:4px;}
+.feedback{margin-top:10px;font-size:13px;font-weight:600}
+.feedback.ok{color:var(--ok)}.feedback.err{color:var(--err)}
+.hint{color:var(--muted);font-size:12px;margin-top:6px}
+.hidden{display:none!important}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.err-close-block{background:#1e293b;border:2px solid var(--accent);border-radius:10px;padding:12px;margin-top:12px;box-shadow:0 4px 12px rgba(56,189,248,0.2)}
+.err-close-block h3{color:var(--accent);margin:0 0 8px 0;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎧 Тренажёр оператора</h1>
+
+<div class="card" id="loginView">
+<h2>Вход</h2>
+<div class="grid2">
+<div>
+<label class="small">Роль</label>
+<select id="roleSelect"><option value="guest">Оператор</option><option value="admin">Сотрудник РИО</option></select>
+<div id="guestFields">
+<label class="small" style="margin-top:10px;">Имя</label><input type="text" id="gFirstName" placeholder="Иван">
+<label class="small" style="margin-top:8px;">Фамилия</label><input type="text" id="gLastName" placeholder="Иванов">
+</div>
+<div id="adminFields" class="hidden">
+<label class="small" style="margin-top:10px;">Пароль</label><input type="password" id="adminPass">
+</div>
+<button class="primary" id="loginBtn" style="margin-top:12px;">Войти</button>
+<div class="feedback err" id="loginError"></div>
+</div>
+</div>
+</div>
+
+<div id="guestView" class="hidden">
+<div class="card"><div class="row" style="justify-content:space-between"><div><span class="badge guest">ОПЕРАТОР</span> <b id="guestName"></b></div><button class="ghost small" id="guestLogout">Выйти</button></div></div>
+
+<div class="tabs" id="guestTabs">
+<div class="tab active" data-page="gP1">1. Проверка чата</div>
+<div class="tab" data-page="gP2">2. Live</div>
+<div class="tab" data-page="gP3">📋 Лист со связями</div>
+<div class="tab" data-page="gP4">🎯 Соединение</div>
+<div class="tab" data-page="gP5">🔍 Проверка ошибок</div>
+</div>
+
+<section class="page active" id="gP1">
+<div class="card">
+<h2>1. Проверка чата</h2>
+<div id="guestChatSelect" style="margin-top:10px"></div>
+<div class="chat" id="guestCheckChat" style="margin-top:10px"></div>
+<div id="guestCheckOptions" style="margin-top:10px"></div>
+<h3>Статус</h3>
+<div class="status-row" id="guestCheckStatuses"></div>
+<h3>Подстатус</h3>
+<div class="status-row" id="guestCheckSubStatuses"></div>
+<button class="ok" id="guestCheckSend" style="margin-top:12px">Отправить результат</button>
+<div class="feedback" id="guestCheckFeedback"></div>
+</div>
+</section>
+
+<section class="page" id="gP2">
+<div class="card">
+<h2>2. Live</h2>
+<div class="hint" id="guestLiveStatus"></div>
+<div class="chat" id="guestLiveChat" style="margin-top:10px"></div>
+<label class="small" style="margin-top:12px">Ваш ответ</label>
+<textarea id="guestReplyInput"></textarea>
+<button class="primary" id="guestSendReply" style="margin-top:8px">Отправить ответ</button>
+<h3>Статус</h3>
+<div class="status-row" id="guestLiveStatuses"></div>
+<h3>Подстатус</h3>
+<div class="status-row" id="guestLiveSubStatuses"></div>
+<button class="ok" id="guestSendResult" style="margin-top:12px">Отправить результат</button>
+<div class="feedback" id="guestLiveFeedback"></div>
+</div>
+</section>
+
+<section class="page" id="gP3">
+<div class="card">
+<h2>📋 Лист со связями</h2>
+<div class="linker-wrap" style="margin-top:14px">
+<svg id="svgLayer" class="layer"></svg>
+<div class="linker-grid">
+<div class="linker-col"><h4>Сообщения клиента</h4><div id="linkerClient"></div></div>
+<div class="linker-col"><h4>Ответ клиенту</h4><div id="linkerAnswer"></div></div>
+<div class="linker-col"><h4>Статус</h4><div id="linkerStatus"></div></div>
+<div class="linker-col"><h4>Подстатус</h4><div id="linkerSub"></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="page" id="gP4">
+<div class="card">
+<h2>🎯 Соединение</h2>
+<div id="matchStatusPicker">
+<div class="hint">Выберите статус.</div>
+<div id="matchStatusList" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;"></div>
+</div>
+<div id="matchEditor" class="hidden">
+<div class="row" style="justify-content:space-between;margin-bottom:10px;">
+<h3 id="matchStatusTitle" style="margin:0;font-size:16px;color:var(--text);text-transform:none;"></h3>
+<button class="ghost small" id="matchBackBtn">← К статусам</button>
+</div>
+<div class="linker-wrap" style="margin-top:14px">
+<svg id="svgLayerMatch" class="layer"></svg>
+<div class="linker-grid" style="grid-template-columns: 1fr 1fr;">
+<div class="linker-col"><h4>Подстатусы</h4><div id="matchLeft"></div></div>
+<div class="linker-col"><h4>Описания (перемешаны)</h4><div id="matchRight"></div></div>
+</div>
+</div>
+</div>
+<div id="matchOtherPicker" class="hidden">
+  <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+    <h3 style="margin:0;font-size:16px;color:var(--text);text-transform:none;">Прочие статусы</h3>
+    <button class="ghost small" id="matchBackBtnOther">← К статусам</button>
+  </div>
+  <div class="linker-wrap" style="margin-top:14px">
+    <svg id="svgLayerOther" class="layer"></svg>
+    <div class="linker-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="linker-col"><h4>Статусы</h4><div id="matchOtherLeft"></div></div>
+      <div class="linker-col"><h4>Описания (перемешаны)</h4><div id="matchOtherRight"></div></div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+
+<section class="page" id="gP5">
+<div class="card">
+<h2>🔍 Проверка ошибок</h2>
+<div id="guestErrorsView"></div>
+<button class="ok" id="guestSendAllBtn" style="margin-top:20px; width:100%;">Отправить ВСЁ на проверку</button>
+</div>
+</section>
+</div>
+
+<div id="adminView" class="hidden">
+<div class="card"><div class="row" style="justify-content:space-between"><div><span class="badge admin">СОТРУДНИК РИО</span> <b>Сотрудник</b></div><div class="row"><span class="hint"><span class="live-dot"></span>Live</span><button class="ghost small" id="adminLogout">Выйти</button></div></div><div class="hint" id="adminActiveLine"></div></div>
+
+<div class="tabs" id="adminTabs">
+<div class="tab active" data-page="aP2">2. Live</div>
+<div class="tab" data-page="aP1">1. Чаты</div>
+<div class="tab" data-page="aP5">⚙️ Статусы</div>
+<div class="tab" data-page="aP4">📋 Лист</div>
+<div class="tab" data-page="aP6">🔍 Ошибки</div>
+<div class="tab" data-page="aP3">3. Результаты</div>
+</div>
+
+<section class="page" id="aP1"><div class="card"><h2>1. Чаты и варианты</h2><div id="checkEditor"></div><button class="primary" id="addChatBtn" style="margin-top:10px">+ Новый чат</button></div></section>
+
+<section class="page active" id="aP2">
+<div class="card">
+  <h2>Выбор оператора для Live</h2>
+  <div class="hint" style="margin-bottom:10px;">Выберите, с кем будете вести диалог.</div>
+  <div id="queueList" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+</div>
+<div class="grid2">
+<div class="card"><h2>Диалог</h2><div class="chat" id="adminChat"></div><div class="hint" id="adminStatusHint"></div></div>
+<div class="card">
+<h2>Сообщение клиента</h2>
+<textarea id="adminClientMsg" placeholder="Здравствуйте..."></textarea>
+<button class="primary" id="adminSendClient" style="margin-top:8px">Отправить</button>
+<h3>Результат от оператора</h3><div id="adminGuestResult"></div>
+</div>
+</div>
+</section>
+
+<section class="page" id="aP5">
+<div class="card">
+<h2>⚙️ Статусы и подстатусы</h2>
+<div id="statusEditor"></div>
+<button class="primary" id="addStatusBtn" style="margin-top:10px">+ Новый статус</button>
+</div>
+</section>
+
+<section class="page" id="aP4"><div class="card">
+<h2>📋 Лист</h2>
+<div class="hint" style="margin-bottom:10px;">Здесь вы видите, как оператор соединил элементы. Редактируйте текст при необходимости.</div>
+<div class="linker-wrap" style="margin-top:12px">
+<svg id="svgLayerAdmin" class="layer"></svg>
+<div class="linker-grid">
+<div class="linker-col"><h4>Сообщения клиента</h4><div id="adminLinkerClient"></div></div>
+<div class="linker-col"><h4>Ответ клиенту</h4><div id="adminLinkerAnswer"></div></div>
+<div class="linker-col"><h4>Статус</h4><div id="adminLinkerStatus"></div></div>
+<div class="linker-col"><h4>Подстатус</h4><div id="adminLinkerSub"></div></div>
+</div>
+</div>
+<div class="row" style="margin-top:12px">
+<button class="primary small" id="addClientRow">+ Клиент</button>
+<button class="primary small" id="addAnswerRow">+ Ответ</button>
+<button class="primary small" id="addStatusRow">+ Статус</button>
+<button class="primary small" id="addSubRow">+ Подстатус</button>
+</div>
+</div></section>
+
+<section class="page" id="aP6">
+<div class="card">
+<h2>🔍 Проверка ошибок</h2>
+<div id="errorEditorList"></div>
+<button class="primary" id="addErrorChatBtn" style="margin-top:10px">+ Новый чат с ошибками</button>
+</div>
+</section>
+
+<section class="page" id="aP3">
+<div class="card">
+<h2>📊 Результаты (Реальное время)</h2>
+<select id="resultsGuestSelect" style="margin-bottom:12px"></select>
+<div id="resultsBody"></div>
+<button class="primary" id="resetAll" style="margin-top:16px">Сбросить всё</button>
+</div>
+</section>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><script>
+// ТВОИ КЛЮЧИ FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyBDRyFFcWc0taMpnhgChG73ffn8Rnm2KHU",
+  authDomain: "rio-trainer.firebaseapp.com",
+  databaseURL: "https://rio-trainer-default-rtdb.firebaseio.com",
+  projectId: "rio-trainer",
+  storageBucket: "rio-trainer.firebasestorage.app",
+  messagingSenderId: "261174011762",
+  appId: "1:261174011762:web:febc066f498089b14fdfeb"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const ADMIN_PASS = 'ORIOpRaKtIkA';
+
+const FULL_STATUSES = [
+  { label: 'Не принято', bgColor:'#9e2a2b', txtColor:'#ffffff', subs: [], desc: 'Не принято' },
+  { label: 'Перезвон от М', bgColor:'#b1a59a', txtColor:'#000000', subs: [], desc: 'Перезвон от мастера' },
+  { label: 'Перезвон где М', bgColor:'#a3889b', txtColor:'#000000', subs: [], desc: 'Перезвон где мастер' },
+  { label: 'Не заказ', bgColor:'#7b8b9e', txtColor:'#ffffff', subs: [], desc: 'Не заказ' },
+  { label: 'Стоп-фактор', bgColor:'#1e5bbd', txtColor:'#ffffff', subs: [
+    {label:'Вне зоны', desc:'клиент находится вне зоны выезда по карте'},
+    {label:'Время', desc:'клиент хочет мастера в нерабочее время'},
+    {label:'Проблемный КЛ', desc:'пьяный, несовершеннолетний'},
+    {label:'Фикс цены', desc:'ограниченный бюджет'},
+    {label:'Адрес', desc:'ошибка с городом'},
+    {label:'Скупка', desc:'продажа/покупка техники'},
+    {label:'Акт', desc:'акт технического заключения'},
+    {label:'Тип (БЫТ)', desc:'плазм ТВ, пром ХД'},
+    {label:'Тип (МНЧ)', desc:'уличные работы'},
+    {label:'Возраст', desc:'ХД старше 30 лет'},
+    {label:'Корпус', desc:'корпусные работы'},
+    {label:'Прочее', desc:'другая причина'}
+  ]},
+  { label: 'Спам', bgColor:'#551a8b', txtColor:'#ffffff', subs: [
+    {label:'Ошибся', desc:'ошибся номером'},
+    {label:'Реклама', desc:'реклама'},
+    {label:'Вакансия', desc:'ищет работу'},
+    {label:'Листовки', desc:'жалоба'},
+    {label:'Подрядчик', desc:'бригадир'},
+    {label:'Спам', desc:'хулиганство'},
+    {label:'Прочее', desc:'другое'}
+  ]},
+  { label: 'Перенос', bgColor:'#794828', txtColor:'#ffffff', subs: [], desc: 'Перенос заказа' },
+  { label: 'Отмена', bgColor:'#404040', txtColor:'#ffffff', subs: [
+    {label:'Другой М', desc:'наши другого мастера'},
+    {label:'Сами', desc:'сами починили'},
+    {label:'Заработало', desc:'техника заработала'},
+    {label:'Купят новую', desc:'купят новую технику'},
+    {label:'Отзывы', desc:'не нравятся отзывы'},
+    {label:'Планы', desc:'изменились планы'},
+    {label:'Без причины', desc:'передумали'}
+  ]},
+  { label: 'Принято', bgColor:'#2e7d5e', txtColor:'#ffffff', subs: [], desc: 'Принято' },
+  { label: 'На прозвон', bgColor:'#a3a9b0', txtColor:'#000000', subs: [], desc: 'На прозвон' },
+  { label: 'Город не берёт', bgColor:'#3b72a3', txtColor:'#ffffff', subs: [], desc: 'Город не берёт' },
+  { label: 'Игнор', bgColor:'#a36b1e', txtColor:'#ffffff', subs: [], desc: 'Игнор' },
+  { label: 'Принято по гарантии', bgColor:'#c2a332', txtColor:'#ffffff', subs: [], desc: 'Принято по гарантии' },
+  { label: 'Упущенный заказ', bgColor:'#cc0000', txtColor:'#ffffff', subs: [], desc: 'Упущенный заказ' },
+  { label: 'Дубль', bgColor:'#5c6a7b', txtColor:'#ffffff', subs: [
+    {label:'КЛ уточнял', desc:'входящий звонок'},
+    {label:'Дисп уточнял', desc:'исходящий звонок'},
+    {label:'Миссклик', desc:'случайно создал'},
+    {label:'Прочее', desc:'другое'}
+  ]}
+];
+
+const DEFAULT_CHATS = [
+  {
+    id: 'c1',
+    messages: [
+      {who: 'client', text: 'Здравствуйте! Когда будет мастер? Должен быть еще 30 мин назад'},
+      {who: 'operator', text: 'Здравствуйте! Уточните контактный телефон с которого вы обращались'},
+      {who: 'client', text: '89990991122'}
+    ],
+    options: ['Уточнить телефон', 'Напарник к вам уже выехал, ожидайте пожалуйста', 'Отменить заказ'],
+    correct: 1,
+    correctStatus: 'Стоп-фактор',
+    correctSub: 'Время'
+  }
+];
+
+const DEFAULT_ERROR_TESTS = [
+  {
+    id: 'e1',
+    chat: [
+      {who:'client', text:'Мне нужен ремонт стиральной машины'},
+      {who:'operator', text:'Здравствуйте, а что именно случилось?'},
+      {who:'client', text:'Не сливает воду'},
+      {who:'operator', text:'Укажите бренд и примерный возраст техники'},
+      {who:'client', text:'Midea, лет 10 примерно'},
+      {who:'operator', text:'Отлично, укажите адрес с номером квартиры и контактный телефон, для связи'},
+      {who:'client', text:'Казань, ул Горсоветская, д 29, кв 37'},
+      {who:'operator', text:'До встречи, буду я или мой напарник'}
+    ],
+    status: 'Принято',
+    sub: '',
+    adminErrors: ['Не уточнил адрес', 'Не уточнил модель техники', 'Не уточнил возраст техники', 'Не сказал клиенту про время выезда'],
+    operatorAnswers: null
+  }
+];
+
+const DEFAULT_STATE = {
+  queue: [], activeGuestId: null,
+  chats: structuredClone(DEFAULT_CHATS),
+  guestCheckChatId: null, guestCheckSelectedOption: null, guestCheckSelectedStatus: null, guestCheckSelectedSub: null, guestCheckResult: null,
+  statuses: structuredClone(FULL_STATUSES),
+  dialogLog: [], guestLiveSelectedStatus: null, guestLiveSelectedSub: null, guestLiveResult: null, dialogActive: true,
+  linker: {
+    client: [
+      {text:'Здравствуйте, нужна бригада из 3 человек, объем работ большой'},
+      {text:'Здравствуйте, когда будет мастер? Он должен быть еще 40 мин назад'},
+      {text:'Здравствуйте. Надо поменять батареи чугунные, нужна сварка, можете помочь?'},
+      {text:'Здравствуйте. Отмените встречу, к нам мастер из ук уже приехал'},
+      {text:'Здравствуйте. Мне нужна диагностика стиральной машинки, ремонт не планирую'}
+    ],
+    answer: [
+      {text:'Здравствуйте. Ожидайте связи пожалуйста, напарник уже выехал к вам'},
+      {text:'Здравствуйте, извините, но такими работами не занимаюсь'},
+      {text:'Здравствуйте. Хорошо, встречу тогда отменяю, давайте вам после наберу'},
+      {text:'Здравствуйте. Не смогу вам помочь, извините, занимаюсь только ремонтом'},
+      {text:'Здравствуйте, не смогу вам помочь, извините'}
+    ],
+    status: [
+      {text:'Перезвон где М'},
+      {text:'Стоп-фактор'},
+      {text:'Отмена'},
+      {text:'Спам'},
+      {text:'Не заказ'}
+    ],
+    sub: [
+      {text:'Подрядчик'},
+      {text:'Тип (МНЧ)'},
+      {text:'Другой М'},
+      {text:'Ошибся'},
+      {text:'Возраст'}
+    ],
+    links: [],
+    adminLinks: []
+  },
+  matchLinks: {}, matchRightOrder: {}, matchCurrentStatus: null, matchOtherStatus: null, matchOtherRightOrder: [],
+  errorTests: structuredClone(DEFAULT_ERROR_TESTS),
+  results: []
+};
+
+let STATE = structuredClone(DEFAULT_STATE);
+let fbResults = [];
+
+const $=id=>document.getElementById(id);
+const now=()=>new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>'g'+Math.random().toString(36).slice(2,9);
+
+function getSession(){try{return JSON.parse(localStorage.getItem('trainer_session')||'null');}catch{return null;}}
+function setSession(s){localStorage.setItem('trainer_session',JSON.stringify(s));}
+function clearSession(){localStorage.removeItem('trainer_session');}
+
+// ==========================================
+// FIREBASE СИНХРОНИЗАЦИЯ
+// ==========================================
+db.ref('results').on('value', (snapshot) => {
+  const data = snapshot.val();
+  fbResults = data ? Object.values(data) : [];
+  
+  const s = getSession();
+  if(s && s.role === 'admin'){
+    renderResults();
+  }
+});
+
+function sendResultToFirebase(resultData) {
+  const session = getSession();
+  if(!session) return;
+  
+  const key = Date.now() + '_' + Math.random().toString(36).slice(2,5);
+  resultData.guestId = session.id;
+  resultData.guestName = session.name;
+  
+  db.ref('results/' + key).set(resultData).then(() => {
+    console.log("Отправлено");
+  }).catch((err) => {
+    alert("Ошибка: " + err.message);
+  });
+}
+
+$('roleSelect').onchange=()=>{const r=$('roleSelect').value;$('guestFields').classList.toggle('hidden',r!=='guest');$('adminFields').classList.toggle('hidden',r!=='admin');};
+$('roleSelect').onchange();
+
+$('loginBtn').onclick=()=>{
+  const r=$('roleSelect').value;
+  $('loginError').textContent='';
+  if(r==='guest'){
+    const f=$('gFirstName').value.trim(),l=$('gLastName').value.trim();
+    if(!f||!l){$('loginError').textContent='Введите имя и фамилию.';return;}
+    const id=uid();
+    setSession({role:'guest',id,name:f+' '+l,since:Date.now()});
+    route();
+  }else{
+    if($('adminPass').value!==ADMIN_PASS){$('loginError').textContent='Неверный пароль.';return;}
+    setSession({role:'admin',name:'Сотрудник РИО',since:Date.now()});
+    route();
+  }
+};
+
+$('guestLogout').onclick=()=>{
+  clearSession();
+  route();
+};
+$('adminLogout').onclick=()=>{clearSession();route();};
+
+function route(){
+  const s=getSession();
+  $('loginView').classList.toggle('hidden',!!s);
+  $('guestView').classList.toggle('hidden',!s||s.role!=='guest');
+  $('adminView').classList.toggle('hidden',!s||s.role!=='admin');
+  if(s?.role==='guest')renderGuest(s);
+  if(s?.role==='admin')renderAdmin();
+}
+
+document.querySelectorAll('#guestTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#guestTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#guestView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});
+document.querySelectorAll('#adminTabs .tab').forEach(tab=>{tab.onclick=()=>{document.querySelectorAll('#adminTabs .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('#adminView .page').forEach(p=>p.classList.remove('active'));tab.classList.add('active');$(tab.dataset.page).classList.add('active');};});function renderGuest(s){
+  $('guestName').textContent=s.name;
+  renderGuestCheck();
+  renderGuestLive();
+  renderGuestLinker();
+  renderGuestMatch();
+  renderGuestErrors();
+}
+
+function renderGuestCheck(){
+  const sel=$('guestChatSelect');
+  sel.innerHTML='<label class="small">Чат</label>'+STATE.chats.map((c,i)=>`<button class="option ${STATE.guestCheckChatId===c.id?'correct':''}" data-chat-pick="${c.id}" ${STATE.guestCheckResult&&STATE.guestCheckResult.chatId===c.id?'disabled':''}>Чат ${i+1}</button>`).join('');
+  sel.querySelectorAll('[data-chat-pick]').forEach(b=>{b.onclick=()=>{STATE.guestCheckChatId=b.dataset.chatPick;STATE.guestCheckSelectedOption=null;renderGuestCheck();};});
+  const chat=STATE.chats.find(c=>c.id===STATE.guestCheckChatId);
+  const chatEl=$('guestCheckChat'),optEl=$('guestCheckOptions'),stEl=$('guestCheckStatuses'),subEl=$('guestCheckSubStatuses'),fb=$('guestCheckFeedback');
+  chatEl.innerHTML='';optEl.innerHTML='';stEl.innerHTML='';subEl.innerHTML='';fb.textContent='';
+  if(!chat){chatEl.innerHTML='<div class="hint">Выберите чат.</div>';return;}
+  chatEl.innerHTML=chat.messages.map(m=>`<div class="msg ${m.who}"><span class="label">${m.who==='client'?'Клиент':'Оператор'}</span>${esc(m.text)}</div>`).join('');
+  
+  if(STATE.guestCheckResult&&STATE.guestCheckResult.chatId===chat.id){
+    const isCorrect = STATE.guestCheckResult.optionIdx === chat.correct && STATE.guestCheckResult.status === chat.correctStatus && STATE.guestCheckResult.sub === chat.correctSub;
+    fb.className='feedback ' + (isCorrect ? 'ok' : 'err');
+    fb.innerHTML = `Результат: <b>${esc(STATE.guestCheckResult.status)}</b>${STATE.guestCheckResult.sub?' → '+esc(STATE.guestCheckResult.sub):''}. ${isCorrect ? '✓ Верно!' : '✕ Есть ошибки.'}`;
+    chat.options.forEach((o,i)=>{
+      const b=document.createElement('button');
+      b.className='option'+(STATE.guestCheckResult.optionIdx===i?' correct':'');
+      b.textContent=o; b.disabled=true;
+      optEl.appendChild(b);
+    });
+    return;
+  }
+  
+  chat.options.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='option'+(STATE.guestCheckSelectedOption===i?' correct':'');
+    b.textContent=o;
+    b.onclick=()=>{STATE.guestCheckSelectedOption=i;renderGuestCheck();};
+    optEl.appendChild(b);
+  });
+  
+  STATE.statuses.forEach(st=>{
+    const b=document.createElement('button');
+    b.className='status-btn'+(STATE.guestCheckSelectedStatus===st.label?' selected':'');
+    b.style.background=st.bgColor || '';
+    b.style.color=st.txtColor || '';
+    b.style.borderColor=st.bgColor || '#475569';
+    b.textContent=st.label;
+    b.onclick=()=>{STATE.guestCheckSelectedStatus=st.label;STATE.guestCheckSelectedSub=null;renderGuestCheck();};
+    stEl.appendChild(b);
+  });
+  
+  const curStatus=STATE.statuses.find(s=>s.label===STATE.guestCheckSelectedStatus);
+  if(curStatus && curStatus.subs && curStatus.subs.length > 0){
+    curStatus.subs.forEach(sub=>{
+      const b=document.createElement('button');
+      b.className='status-btn'+(STATE.guestCheckSelectedSub===sub.label?' selected':'');
+      b.textContent=sub.label;
+      b.onclick=()=>{STATE.guestCheckSelectedSub=sub.label;renderGuestCheck();};
+      subEl.appendChild(b);
+    });
+  } else if (curStatus && curStatus.desc) {
+    subEl.innerHTML = `<div class="hint">${esc(curStatus.desc)}</div>`;
+  }
+}
+
+$('guestCheckSend').onclick = () => {
+  if(!STATE.guestCheckChatId){ alert('Выберите чат'); return; }
+  if(STATE.guestCheckSelectedOption === null){ alert('Выберите вариант'); return; }
+  if(!STATE.guestCheckSelectedStatus){ alert('Выберите статус'); return; }
+  const curStatus = STATE.statuses.find(s=>s.label===STATE.guestCheckSelectedStatus);
+  if(curStatus && curStatus.subs && curStatus.subs.length > 0 && !STATE.guestCheckSelectedSub){ alert('Выберите подстатус'); return; }
+  
+  const chat = STATE.chats.find(c => c.id === STATE.guestCheckChatId);
+  STATE.guestCheckResult = {
+    chatId: STATE.guestCheckChatId,
+    optionIdx: STATE.guestCheckSelectedOption,
+    status: STATE.guestCheckSelectedStatus,
+    sub: STATE.guestCheckSelectedSub,
+    ts: now()
+  };
+  
+  sendResultToFirebase({
+    type: 'Проверка чата',
+    taskTitle: 'Чат ' + (STATE.chats.indexOf(chat)+1),
+    answer: chat.options[STATE.guestCheckSelectedOption],
+    status: STATE.guestCheckSelectedStatus,
+    sub: STATE.guestCheckSelectedSub,
+    ts: now()
+  });
+  
+  renderGuestCheck();
+};
+
+function renderGuestLive(){
+  const isActive=STATE.activeGuestId===getSession()?.id;
+  $('guestLiveStatus').innerHTML=isActive?'Сотрудник РИО выбрал вас. Пишите ответы.':'Ждёте, пока сотрудник РИО выберет вас в live.';
+  $('guestLiveChat').innerHTML=STATE.dialogLog.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Вы</span>${esc(d.answer)}<span class="time">${d.ats||''}</span></div>`:''}`).join('')||'<div class="hint">Ждём сообщения.</div>';
+  
+  const sr=$('guestLiveStatuses'),sub=$('guestLiveSubStatuses');
+  sr.innerHTML='';sub.innerHTML='';
+  
+  STATE.statuses.forEach(st=>{
+    const b=document.createElement('button');
+    b.className='status-btn'+(STATE.guestLiveSelectedStatus===st.label?' selected':'');
+    b.style.background=st.bgColor || '';
+    b.style.color=st.txtColor || '';
+    b.style.borderColor=st.bgColor || '#475569';
+    b.textContent=st.label;
+    b.disabled=!isActive||!!STATE.guestLiveResult;
+    b.onclick=()=>{STATE.guestLiveSelectedStatus=st.label;STATE.guestLiveSelectedSub=null;renderGuestLive();};
+    sr.appendChild(b);
+  });
+  
+  const curStatus=STATE.statuses.find(s=>s.label===STATE.guestLiveSelectedStatus);
+  if(curStatus){
+    if(curStatus.subs && curStatus.subs.length > 0){
+      curStatus.subs.forEach(sb=>{
+        const b=document.createElement('button');
+        b.className='status-btn'+(STATE.guestLiveSelectedSub===sb.label?' selected':'');
+        b.textContent=sb.label;
+        b.disabled=!isActive||!!STATE.guestLiveResult;
+        b.onclick=()=>{STATE.guestLiveSelectedSub=sb.label;renderGuestLive();};
+        sub.appendChild(b);
+      });
+    } else if (curStatus.desc) {
+      sub.innerHTML = `<div class="hint">${esc(curStatus.desc)}</div>`;
+    }
+  }
+  
+  const can=isActive&&STATE.dialogActive&&!STATE.guestLiveResult;
+  $('guestReplyInput').disabled=!can;
+  $('guestSendReply').disabled=!can;
+  $('guestSendResult').disabled=!isActive||!STATE.guestLiveSelectedStatus||(curStatus&&curStatus.subs.length>0&&!STATE.guestLiveSelectedSub)||!!STATE.guestLiveResult;
+  
+  const fb=$('guestLiveFeedback');
+  if(STATE.guestLiveResult){
+    fb.className='feedback ok';
+    fb.textContent=`Результат: ${STATE.guestLiveResult.status}${STATE.guestLiveResult.sub?' → '+STATE.guestLiveResult.sub:''}. Диалог завершён.`;
+  }else{
+    fb.textContent='';fb.className='feedback';
+  }
+}
+
+$('guestSendReply').onclick=()=>{
+  const t=$('guestReplyInput').value.trim();
+  if(!t)return;
+  let target=null;
+  for(let i=STATE.dialogLog.length-1;i>=0;i--){
+    if(STATE.dialogLog[i].clientMsg&&!STATE.dialogLog[i].answer){target=STATE.dialogLog[i];break;}
+  }
+  if(target){target.answer=t;target.ats=now();}
+  else STATE.dialogLog.push({clientMsg:null,answer:t,ats:now(),ts:now()});
+  $('guestReplyInput').value='';
+  renderGuestLive();
+};
+
+$('guestSendResult').onclick=()=>{
+  if(!STATE.guestLiveSelectedStatus)return;
+  const curStatus = STATE.statuses.find(s=>s.label===STATE.guestLiveSelectedStatus);
+  if(curStatus && curStatus.subs && curStatus.subs.length > 0 && !STATE.guestLiveSelectedSub) return;
+  
+  STATE.guestLiveResult={status:STATE.guestLiveSelectedStatus,sub:STATE.guestLiveSelectedSub,ts:now()};
+  STATE.dialogActive=false;
+  
+  sendResultToFirebase({
+    type: 'Live',
+    taskTitle: 'Live-диалог',
+    answer: '—',
+    status: STATE.guestLiveSelectedStatus,
+    sub: STATE.guestLiveSelectedSub,
+    ts: now()
+  });
+  
+  renderGuestLive();
+};
+
+let linkerSel=null;
+function renderGuestLinker(){
+  renderLinkerCol('linkerClient',STATE.linker.client,'client',false);
+  renderLinkerCol('linkerAnswer',STATE.linker.answer,'answer',false);
+  renderLinkerCol('linkerStatus',STATE.linker.status,'status',false);
+  renderLinkerCol('linkerSub',STATE.linker.sub,'sub',false);
+  drawArrows('svgLayer');
+}
+function renderLinkerCol(elId,arr,colKey,admin){
+  const el=$(elId);el.innerHTML='';
+  arr.forEach((it,i)=>{
+    const d=document.createElement('div');
+    d.className='linker-item'+(linkerSel&&linkerSel.col===colKey&&linkerSel.idx===i?' selected':'');
+    d.id='item-'+colKey+'-'+i;
+    d.innerHTML=`<span class="idx">${i+1}</span>${esc(it.text)}`+(admin?`<span class="del" data-del-col="${colKey}" data-del-idx="${i}">✕</span>`:'');
+    if(!admin)d.onclick=()=>handleLinkerClick(colKey,i);
+    el.appendChild(d);
+  });
+}
+function handleLinkerClick(col,idx){
+  if(!linkerSel){linkerSel={col,idx};renderGuestLinker();return;}
+  if(linkerSel.col===col&&linkerSel.idx===idx){linkerSel=null;renderGuestLinker();return;}
+  if(linkerSel.col===col){linkerSel={col,idx};renderGuestLinker();return;}
+  const a=linkerSel,b={col,idx};
+  const exists=STATE.linker.links.find(l=>l.from===a.col&&l.fromIdx===a.idx&&l.to===b.col&&l.toIdx===b.idx);
+  if(exists)STATE.linker.links=STATE.linker.links.filter(l=>l!==exists);
+  else STATE.linker.links.push({from:a.col,fromIdx:a.idx,to:b.col,toIdx:b.idx});
+  linkerSel=null;
+  renderGuestLinker();
+}
+
+let matchSel=null;
+function renderGuestMatch(){
+  const picker=$('matchStatusPicker');
+  const editor=$('matchEditor');
+  const otherPicker=$('matchOtherPicker');
+
+  if(!STATE.matchCurrentStatus && !STATE.matchOtherStatus){
+    picker.classList.remove('hidden');
+    editor.classList.add('hidden');
+    otherPicker.classList.add('hidden');
+    const list=$('matchStatusList');
+    list.innerHTML='';
+    const normalStatuses = STATE.statuses.filter(st => st.subs && st.subs.length > 0);
+    const otherStatuses = STATE.statuses.filter(st => !st.subs || st.subs.length === 0);
+
+    normalStatuses.forEach(st=>{
+      if(!STATE.matchLinks[st.label]) STATE.matchLinks[st.label]=[];
+      if(!STATE.matchRightOrder[st.label]){
+        const right=st.subs.map(sub=>({text:sub.desc, sub:sub.label}));
+        right.sort(()=>Math.random()-0.5);
+        STATE.matchRightOrder[st.label]=right;
+      }
+      const doneCount=STATE.matchLinks[st.label].length;
+      const total=st.subs.length;
+      const allDone=doneCount===total&&total>0;
+      const btn=document.createElement('button');
+      btn.className='option'+(allDone?' correct':'');
+      btn.style.marginBottom='0';
+      btn.innerHTML=`<b>${esc(st.label)}</b> <span class="hint">(${doneCount}/${total})</span>`;
+      btn.onclick=()=>{STATE.matchCurrentStatus=st.label;matchSel=null;renderGuestMatch();};
+      list.appendChild(btn);
+    });
+
+    if(otherStatuses.length > 0){
+      const btnOther=document.createElement('button');
+      btnOther.className='option';
+      btnOther.style.marginBottom='0';
+      btnOther.style.borderColor='var(--warn)';
+      btnOther.innerHTML=`<b>Прочие статусы (без подстатусов)</b>`;
+      btnOther.onclick=()=>{STATE.matchOtherStatus='other';matchSel=null;renderGuestMatch();};
+      list.appendChild(btnOther);
+    }
+    return;
+  }
+
+  if(STATE.matchCurrentStatus){
+    picker.classList.add('hidden');
+    otherPicker.classList.add('hidden');
+    editor.classList.remove('hidden');
+    const statusLabel=STATE.matchCurrentStatus;
+    const st=STATE.statuses.find(s=>s.label===statusLabel);
+    if(!st){STATE.matchCurrentStatus=null;renderGuestMatch();return;}
+    $('matchStatusTitle').textContent=statusLabel;
+    const leftEl=$('matchLeft'),rightEl=$('matchRight');
+    leftEl.innerHTML='';rightEl.innerHTML='';
+    st.subs.forEach((sub,si)=>{
+      const id='ml-'+si;
+      const linked=STATE.matchLinks[statusLabel].find(l=>l.sub===sub.label);
+      const d=document.createElement('div');
+      d.className='linker-item'+(matchSel&&matchSel.id===id?' selected':'');
+      d.id=id;
+      d.style.borderColor=linked?(linked.correct?'var(--ok)':'var(--err)'):'var(--line)';
+      d.innerHTML=`<span class="idx">${si+1}</span><b>${esc(sub.label)}</b>`;
+      d.onclick=()=>handleMatchLeft(sub.label,id);
+      leftEl.appendChild(d);
+    });
+    const order=STATE.matchRightOrder[statusLabel];
+    order.forEach((r,ri)=>{
+      const id='mr-'+ri;
+      const linked=STATE.matchLinks[statusLabel].find(l=>l.rightIdx===ri);
+      const d=document.createElement('div');
+      d.className='linker-item'+(matchSel&&matchSel.id===id?' selected':'');
+      d.id=id;
+      d.style.borderColor=linked?(linked.correct?'var(--ok)':'var(--err)'):'var(--line)';
+      d.innerHTML=`<span class="idx">${ri+1}</span>${esc(r.text)}`;
+      d.onclick=()=>handleMatchRight(ri);
+      rightEl.appendChild(d);
+    });
+    drawArrows('svgLayerMatch');
+  }
+
+  if(STATE.matchOtherStatus === 'other'){
+    picker.classList.add('hidden');
+    editor.classList.add('hidden');
+    otherPicker.classList.remove('hidden');
+    const otherStatuses = STATE.statuses.filter(st => !st.subs || st.subs.length === 0);
+    if(!STATE.matchOtherRightOrder || STATE.matchOtherRightOrder.length === 0){
+      const right = otherStatuses.map(st => ({text: st.desc || st.label, status: st.label}));
+      right.sort(()=>Math.random()-0.5);
+      STATE.matchOtherRightOrder = right;
+    }
+    const leftEl=$('matchOtherLeft'), rightEl=$('matchOtherRight');
+    leftEl.innerHTML=''; rightEl.innerHTML='';
+    otherStatuses.forEach((st,si)=>{
+      const id='mol-'+si;
+      const isLinked = (STATE.matchLinks['other']||[]).find(l => l.status === st.label);
+      const d=document.createElement('div');
+      d.className='linker-item'+(matchSel&&matchSel.id===id?' selected':'');
+      d.id=id;
+      d.style.borderColor = isLinked ? (isLinked.correct?'var(--ok)':'var(--err)') : 'var(--line)';
+      d.innerHTML=`<span class="idx">${si+1}</span><b>${esc(st.label)}</b>`;
+      d.onclick=()=>{matchSel={type:'other-left', sub:st.label, id}; renderGuestMatch();};
+      leftEl.appendChild(d);
+    });
+    STATE.matchOtherRightOrder.forEach((r,ri)=>{
+      const id='mor-'+ri;
+      const isLinked = (STATE.matchLinks['other']||[]).find(l => l.rightIdx === ri);
+      const d=document.createElement('div');
+      d.className='linker-item'+(matchSel&&matchSel.id===id?' selected':'');
+      d.id=id;
+      d.style.borderColor = isLinked ? (isLinked.correct?'var(--ok)':'var(--err)') : 'var(--line)';
+      d.innerHTML=`<span class="idx">${ri+1}</span>${esc(r.text)}`;
+      d.onclick=()=>handleMatchOtherRight(ri);
+      rightEl.appendChild(d);
+    });
+    drawArrows('svgLayerOther');
+  }
+}
+
+function handleMatchLeft(subLabel,id){
+  matchSel={type:'left',sub:subLabel,id};
+  renderGuestMatch();
+}
+
+function handleMatchRight(ri){
+  if(!matchSel||matchSel.type!=='left')return;
+  const statusLabel=STATE.matchCurrentStatus;
+  const order=STATE.matchRightOrder[statusLabel];
+  const rightItem=order[ri];
+  const correct=rightItem.sub===matchSel.sub;
+  STATE.matchLinks[statusLabel]=STATE.matchLinks[statusLabel].filter(l=>l.sub!==matchSel.sub&&l.rightIdx!==ri);
+  STATE.matchLinks[statusLabel].push({sub:matchSel.sub,rightIdx:ri,correct});
+  matchSel=null;
+  renderGuestMatch();
+}
+
+function handleMatchOtherRight(ri){
+  if(!matchSel || matchSel.type !== 'other-left') return;
+  const rightItem = STATE.matchOtherRightOrder[ri];
+  const correct = rightItem.status === matchSel.sub;
+  if(!STATE.matchLinks['other']) STATE.matchLinks['other'] = [];
+  STATE.matchLinks['other'] = STATE.matchLinks['other'].filter(l => l.sub !== matchSel.sub && l.rightIdx !== ri);
+  STATE.matchLinks['other'].push({sub: matchSel.sub, rightIdx: ri, correct});
+  matchSel = null;
+  renderGuestMatch();
+}
+
+document.addEventListener('click', e=>{
+  if(e.target.id==='matchBackBtn'){
+    STATE.matchCurrentStatus=null; matchSel=null; renderGuestMatch();
+  }
+  if(e.target.id==='matchBackBtnOther'){
+    STATE.matchOtherStatus=null; matchSel=null; renderGuestMatch();
+  }
+});
+
+function drawArrows(svgId){
+  const svg=$(svgId);svg.innerHTML='';
+  const wrap=svg.parentElement.getBoundingClientRect();
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  defs.innerHTML='<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#38bdf8"/></marker><marker id="arrOk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#22c55e"/></marker><marker id="arrErr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/></marker>';
+  svg.appendChild(defs);
+
+  if(svgId==='svgLayerMatch'){
+    const statusLabel=STATE.matchCurrentStatus;
+    if(!statusLabel)return;
+    const st=STATE.statuses.find(s=>s.label===statusLabel);
+    if(!st)return;
+    const links=STATE.matchLinks[statusLabel]||[];
+    links.forEach(l=>{
+      const si=st.subs.findIndex(s=>s.label===l.sub);
+      if(si<0)return;
+      const fe=document.getElementById('ml-'+si);
+      const te=document.getElementById('mr-'+l.rightIdx);
+      if(!fe||!te)return;
+      drawLine(svg,fe,te,wrap,l.correct);
+    });
+  } else if(svgId==='svgLayerOther'){
+    const links = STATE.matchLinks['other'] || [];
+    links.forEach(l=>{
+      const si = STATE.statuses.filter(s=>!s.subs||s.subs.length===0).findIndex(s=>s.label===l.sub);
+      if(si<0) return;
+      const fe = document.getElementById('mol-'+si);
+      const te = document.getElementById('mor-'+l.rightIdx);
+      if(!fe||!te) return;
+      drawLine(svg,fe,te,wrap,l.correct);
+    });
+  } else {
+    STATE.linker.links.forEach(l=>{
+      const fe=document.getElementById('item-'+l.from+'-'+l.fromIdx);
+      const te=document.getElementById('item-'+l.to+'-'+l.toIdx);
+      if(!fe||!te)return;
+      drawLine(svg,fe,te,wrap,true);
+    });
+  }
+}
+
+function drawLine(svg,fe,te,wrap,correct){
+  const r1=fe.getBoundingClientRect(),r2=te.getBoundingClientRect();
+  const x1=r1.right-wrap.left,y1=r1.top+r1.height/2-wrap.top;
+  const x2=r2.left-wrap.left,y2=r2.top+r2.height/2-wrap.top;
+  const dx=Math.max(40,Math.abs(x2-x1)/2);
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d',`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
+  p.setAttribute('stroke',correct===false?'#ef4444':correct===true?'#22c55e':'#38bdf8');
+  p.setAttribute('stroke-width','2');p.setAttribute('fill','none');
+  p.setAttribute('marker-end',correct===false?'url(#arrErr)':correct===true?'url(#arrOk)':'url(#arr)');
+  svg.appendChild(p);
+}
+
+function renderGuestErrors(){
+  const box = $('guestErrorsView');
+  box.innerHTML = '';
+  if(!STATE.errorTests || !STATE.errorTests.length) { box.innerHTML = '<div class="hint">Нет заданий.</div>'; return; }
+
+  STATE.errorTests.forEach((et, chatIdx) => {
+    const chatHtml = et.chat.map(m => `<div class="msg ${m.who}"><span class="label">${m.who==='client'?'Клиент':'Оператор'}</span>${esc(m.text)}</div>`).join('');
+    
+    const stObj = STATE.statuses.find(s=>s.label===et.status);
+    const stBg = stObj ? stObj.bgColor : '#8b0000';
+    const stTxt = stObj ? stObj.txtColor : '#ffffff';
+    const subBg = '#4682b4';
+
+    const statusHtml = `
+      <div class="err-close-block">
+        <h3>Чат закрыт:</h3>
+        <div class="row">
+          <span class="status-pill" style="background:${stBg};color:${stTxt};">${esc(et.status || '—')}</span>
+          ${et.sub ? `<span class="status-pill" style="background:${subBg};color:#fff;">${esc(et.sub)}</span>` : ''}
+        </div>
+      </div>
+    `;
+
+    const isDone = !!et.operatorAnswers;
+    const adminErrsHtml = (et.adminErrors || []).map((err, idx) => {
+      let isChecked = false;
+      if (isDone) isChecked = et.operatorAnswers.selectedErrors.includes('admin_'+idx);
+      return `
+        <label class="row" style="margin-bottom:8px; cursor:pointer;">
+          <input type="checkbox" data-chat="${chatIdx}" data-admin-err="${idx}" ${isChecked?'checked':''} ${isDone?'disabled':''}>
+          <span style="font-weight:500; color:#cbd5e1;">${esc(err)}</span>
+        </label>
+      `;
+    }).join('');
+
+    let opErrsHtml = '';
+    if (isDone) {
+      if (et.operatorAnswers.customErrors && et.operatorAnswers.customErrors.length > 0) {
+        opErrsHtml = et.operatorAnswers.customErrors.map((ce, idx) => `
+          <div class="row" style="margin-bottom:8px; align-items:flex-start;">
+            <input type="checkbox" checked disabled style="margin-top:4px;">
+            <div>
+              <div style="font-weight:500; color:#cbd5e1;">${esc(ce.title)}</div>
+              <div class="hint" style="margin-top:2px;">${esc(ce.desc)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      opErrsHtml = `
+        <div style="margin-top:12px; background:#0b1220; padding:10px; border-radius:8px; border:1px dashed var(--line);">
+          <div class="hint" style="margin-bottom:8px;">Добавьте свою ошибку:</div>
+          <input type="text" data-custom-title="${chatIdx}" placeholder="Название ошибки" style="margin-bottom:6px;">
+          <input type="text" data-custom-desc="${chatIdx}" placeholder="Описание ошибки">
+          <button class="primary small" data-add-custom-err="${chatIdx}" style="margin-top:8px;">Добавить</button>
+          <div id="custom-err-list-${chatIdx}" style="margin-top:8px;"></div>
+        </div>
+      `;
+    }
+
+    const html = `
+      <div class="chat-edit-box" style="background:#1e293b;">
+        <div class="head"><b>Задание ${chatIdx + 1}</b></div>
+        <div class="grid2">
+          <div>
+            <div class="chat">${chatHtml}</div>
+            ${statusHtml}
+          </div>
+          <div>
+            <h3>Найденные ошибки</h3>
+            <div>${adminErrsHtml}</div>
+            ${opErrsHtml}
+            ${!isDone ? `<button class="ok" data-send-errors="${chatIdx}" style="margin-top:16px; width:100%;">Отправить результат</button>` : '<div class="feedback ok">Вы уже отправили.</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+    box.innerHTML += html;
+  });
+
+  if(!window.tempCustomErrors) window.tempCustomErrors = {};
+
+  document.querySelectorAll('[data-add-custom-err]').forEach(b => {
+    b.onclick = () => {
+      const chatIdx = +b.dataset.addCustomErr;
+      const title = document.querySelector(`input[data-custom-title="${chatIdx}"]`).value.trim();
+      const desc = document.querySelector(`input[data-custom-desc="${chatIdx}"]`).value.trim();
+      if(!title || !desc) { alert('Заполните название и описание'); return; }
+      if(!window.tempCustomErrors[chatIdx]) window.tempCustomErrors[chatIdx] = [];
+      window.tempCustomErrors[chatIdx].push({title, desc});
+      const listEl = document.getElementById(`custom-err-list-${chatIdx}`);
+      listEl.innerHTML = window.tempCustomErrors[chatIdx].map((ce, i) => `<div style="margin-bottom:4px; font-size:13px; color:#cbd5e1;">✓ ${esc(ce.title)}</div>`).join('');
+      document.querySelector(`input[data-custom-title="${chatIdx}"]`).value = '';
+      document.querySelector(`input[data-custom-desc="${chatIdx}"]`).value = '';
+    };
+  });
+
+  document.querySelectorAll('[data-send-errors]').forEach(b => {
+    b.onclick = () => {
+      const chatIdx = +b.dataset.sendErrors;
+      const et = STATE.errorTests[chatIdx];
+      const selectedErrors = [];
+      document.querySelectorAll(`input[data-chat="${chatIdx}"][data-admin-err]`).forEach(inp => {
+        if(inp.checked) selectedErrors.push(`admin_${inp.dataset.adminErr}`);
+      });
+      et.operatorAnswers = { selectedErrors, customErrors: window.tempCustomErrors[chatIdx] || [] };
+      
+      let answerText = 'Выбрано ошибок: ' + selectedErrors.length;
+      if (et.operatorAnswers.customErrors.length > 0) answerText += ' | Свои: ' + et.operatorAnswers.customErrors.map(e=>e.title).join(', ');
+      
+      sendResultToFirebase({
+        type: 'Проверка ошибок',
+        taskTitle: 'Задание ' + (chatIdx+1),
+        answer: answerText,
+        status: et.status,
+        sub: et.sub,
+        ts: now()
+      });
+      
+      renderGuestErrors();
+    };
+  });
+}/* =============================================================
+   АДМИН
+   ============================================================= */
+function renderAdmin(){
+  renderQueue();
+  renderEditor();
+  renderAdminTrain();
+  renderStatusEditor();
+  renderAdminLinker();
+  renderErrorEditor();
+  renderResults();
+  
+  if(!STATE.activeGuestId){$('adminActiveLine').innerHTML='Live: ни с кем не работаю.';return;}
+  const g=STATE.queue.find(x=>x.id===STATE.activeGuestId);
+  $('adminActiveLine').innerHTML=g?`Live: работаю с <b>${esc(g.first+' '+g.last)}</b>`:'Оператор пропал.';
+}
+
+function renderQueue(){
+  const list=$('queueList');list.innerHTML='';
+  if(!STATE.queue.length){list.innerHTML='<div class="hint">Нет операторов в сети.</div>';return;}
+  STATE.queue.forEach((g,i)=>{
+    const isActive=STATE.activeGuestId===g.id;
+    const b=document.createElement('button');
+    b.className=isActive?'primary':'ghost';
+    b.textContent=`${g.first} ${g.last}` + (isActive ? ' (выбран)' : '');
+    b.onclick=()=>{
+      if(isActive){STATE.activeGuestId=null;}
+      else{STATE.activeGuestId=g.id;STATE.dialogLog=[];STATE.guestLiveSelectedStatus=null;STATE.guestLiveSelectedSub=null;STATE.guestLiveResult=null;STATE.dialogActive=true;}
+      renderAdmin();
+    };
+    list.appendChild(b);
+  });
+}
+
+function renderEditor(){
+  const box=$('checkEditor');box.innerHTML='';
+  STATE.chats.forEach((c,ci)=>{
+    const div=document.createElement('div');div.className='chat-edit-box';
+    let statusOpts = `<option value="">-- Выберите --</option>`;
+    let subOpts = `<option value="">-- Выберите --</option>`;
+    STATE.statuses.forEach(st => { statusOpts += `<option value="${st.label}" ${c.correctStatus===st.label?'selected':''}>${st.label}</option>`; });
+    const curSt = STATE.statuses.find(s => s.label === c.correctStatus);
+    if (curSt && curSt.subs) curSt.subs.forEach(sub => { subOpts += `<option value="${sub.label}" ${c.correctSub===sub.label?'selected':''}>${sub.label}</option>`; });
+
+    div.innerHTML=`<div class="head"><b>Чат ${ci+1}</b><button class="small danger" data-del-chat="${ci}">Удалить</button></div>
+    <label class="small">Сообщения</label><div data-msgs="${ci}"></div>
+    <button class="small ghost" data-add-msg="${ci}" style="margin-bottom:10px">+ Сообщение</button>
+    <label class="small">Варианты ответа</label><div data-opts="${ci}"></div>
+    <button class="small ghost" data-add-opt="${ci}">+ Вариант</button>
+    <div class="row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
+      <div style="flex:1;"><label class="small">Верный статус</label><select data-correct-status="${ci}">${statusOpts}</select></div>
+      <div style="flex:1;"><label class="small">Верный подстатус</label><select data-correct-sub="${ci}">${subOpts}</select></div>
+    </div>`;
+    
+    box.appendChild(div);
+    const msgsDiv=div.querySelector(`[data-msgs="${ci}"]`);
+    c.messages.forEach((m,mi)=>{
+      const row=document.createElement('div');row.className='msg-edit-row';
+      row.innerHTML=`<select data-msg-who="${ci}-${mi}"><option value="client" ${m.who==='client'?'selected':''}>Клиент</option><option value="operator" ${m.who==='operator'?'selected':''}>Оператор</option></select><input type="text" data-msg-text="${ci}-${mi}" value="${esc(m.text)}"><button class="small danger" data-del-msg="${ci}-${mi}">✕</button>`;
+      msgsDiv.appendChild(row);
+    });
+    const optsDiv=div.querySelector(`[data-opts="${ci}"]`);
+    c.options.forEach((o,oi)=>{
+      const row=document.createElement('div');row.className='opt-edit-row';
+      row.innerHTML=`<label><input type="radio" name="correct-${ci}" ${c.correct===oi?'checked':''} data-set-correct="${ci}-${oi}"> верный</label><input type="text" data-opt-text="${ci}-${oi}" value="${esc(o)}"><button class="small danger" data-del-opt="${ci}-${oi}">✕</button>`;
+      optsDiv.appendChild(row);
+    });
+  });
+
+  box.querySelectorAll('[data-del-chat]').forEach(b=>{b.onclick=()=>{if(STATE.chats.length<=1){alert('Хотя бы один чат');return;}if(!confirm('Удалить чат?'))return;STATE.chats.splice(+b.dataset.delChat,1);renderEditor();};});
+  box.querySelectorAll('[data-add-msg]').forEach(b=>{b.onclick=()=>{const ci=+b.dataset.addMsg;STATE.chats[ci].messages.push({who:'client',text:'Новое сообщение'});renderEditor();};});
+  box.querySelectorAll('[data-add-opt]').forEach(b=>{b.onclick=()=>{const ci=+b.dataset.addOpt;STATE.chats[ci].options.push('Новый вариант');renderEditor();};});
+  box.querySelectorAll('[data-del-msg]').forEach(b=>{b.onclick=()=>{const[ci,mi]=b.dataset.delMsg.split('-').map(Number);STATE.chats[ci].messages.splice(mi,1);renderEditor();};});
+  box.querySelectorAll('[data-del-opt]').forEach(b=>{b.onclick=()=>{const[ci,oi]=b.dataset.delOpt.split('-').map(Number);if(STATE.chats[ci].options.length<=1){alert('Хотя бы один вариант');return;}STATE.chats[ci].options.splice(oi,1);if(STATE.chats[ci].correct>=STATE.chats[ci].options.length)STATE.chats[ci].correct=0;renderEditor();};});
+  box.querySelectorAll('[data-msg-who]').forEach(s=>{s.onchange=()=>{const[ci,mi]=s.dataset.msgWho.split('-').map(Number);STATE.chats[ci].messages[mi].who=s.value;};});
+  box.querySelectorAll('[data-msg-text]').forEach(i=>{i.onchange=()=>{const[ci,mi]=i.dataset.msgText.split('-').map(Number);STATE.chats[ci].messages[mi].text=i.value;};});
+  box.querySelectorAll('[data-opt-text]').forEach(i=>{i.onchange=()=>{const[ci,oi]=i.dataset.optText.split('-').map(Number);STATE.chats[ci].options[oi]=i.value;};});
+  box.querySelectorAll('[data-set-correct]').forEach(r=>{r.onchange=()=>{const[ci,oi]=r.dataset.setCorrect.split('-').map(Number);STATE.chats[ci].correct=oi;};});
+  
+  box.querySelectorAll('[data-correct-status]').forEach(s=>{
+    s.onchange=()=>{
+      const ci=+s.dataset.correctStatus;
+      STATE.chats[ci].correctStatus=s.value;
+      STATE.chats[ci].correctSub='';
+      renderEditor();
+    };
+  });
+  box.querySelectorAll('[data-correct-sub]').forEach(s=>{
+    s.onchange=()=>{
+      const ci=+s.dataset.correctSub;
+      STATE.chats[ci].correctSub=s.value;
+    };
+  });
+}
+
+$('addChatBtn').onclick=()=>{STATE.chats.push({id:'c'+Date.now(),messages:[{who:'client',text:'Новое сообщение клиента'}],options:['Вариант 1','Вариант 2'],correct:0,correctStatus:'',correctSub:''});renderEditor();};
+
+function renderStatusEditor(){
+  const box=$('statusEditor');box.innerHTML='';
+  STATE.statuses.forEach((st,si)=>{
+    const div=document.createElement('div');div.className='status-edit-box';
+    const hasSubs = st.subs && st.subs.length > 0;
+    
+    let subsHtml = '';
+    if(hasSubs){
+      subsHtml = st.subs.map((sub,subi)=>`<div class="sub-row"><input type="text" data-sub-text="${si}-${subi}" value="${esc(sub.label)}"><input type="text" data-sub-desc="${si}-${subi}" value="${esc(sub.desc)}" placeholder="Описание"><button class="small danger" data-del-sub="${si}-${subi}">✕</button></div>`).join('');
+    } else {
+      subsHtml = `<div class="row"><input type="text" data-status-desc="${si}" value="${esc(st.desc || '')}" placeholder="Описание статуса (без подстатуса)" style="flex:1;"></div>`;
+    }
+
+    div.innerHTML=`<div class="head"><input type="text" data-status-label="${si}" value="${esc(st.label)}"><button class="small danger" data-del-status="${si}">Удалить статус</button></div>
+    <label class="small">Подстатусы и описания ${!hasSubs ? '(нет подстатусов)' : ''}</label>
+    <div class="sub-list">${subsHtml}</div>
+    <button class="small ghost" data-add-sub="${si}" style="margin-top:8px">+ Подстатус</button>`;
+    box.appendChild(div);
+  });
+  
+  box.querySelectorAll('[data-status-label]').forEach(inp=>{inp.onchange=()=>{const si=+inp.dataset.statusLabel;STATE.statuses[si].label=inp.value;route();};});
+  box.querySelectorAll('[data-del-status]').forEach(b=>{b.onclick=()=>{if(STATE.statuses.length<=1){alert('Хотя бы один статус');return;}if(!confirm('Удалить статус?'))return;STATE.statuses.splice(+b.dataset.delStatus,1);renderStatusEditor();route();};});
+  box.querySelectorAll('[data-add-sub]').forEach(b=>{b.onclick=()=>{const si=+b.dataset.addSub;STATE.statuses[si].subs.push({label:'Новый подстатус',desc:'Описание'});if(STATE.statuses[si].desc) delete STATE.statuses[si].desc;renderStatusEditor();};});
+  box.querySelectorAll('[data-del-sub]').forEach(b=>{b.onclick=()=>{const[si,subi]=b.dataset.delSub.split('-').map(Number);STATE.statuses[si].subs.splice(subi,1);renderStatusEditor();};});
+  box.querySelectorAll('[data-sub-text]').forEach(inp=>{inp.onchange=()=>{const[si,subi]=inp.dataset.subText.split('-').map(Number);STATE.statuses[si].subs[subi].label=inp.value;route();};});
+  box.querySelectorAll('[data-sub-desc]').forEach(inp=>{inp.onchange=()=>{const[si,subi]=inp.dataset.subDesc.split('-').map(Number);STATE.statuses[si].subs[subi].desc=inp.value;};});
+  box.querySelectorAll('[data-status-desc]').forEach(inp=>{inp.onchange=()=>{const si=+inp.dataset.statusDesc;STATE.statuses[si].desc=inp.value;};});
+}
+$('addStatusBtn').onclick=()=>{STATE.statuses.push({label:'Новый статус '+Date.now(),subs:[],bgColor:'#1e293b',txtColor:'#ffffff'});renderStatusEditor();};
+
+function renderAdminTrain(){
+  $('adminChat').innerHTML=STATE.dialogLog.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент (вы)</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Оператор</span>${esc(d.answer)}</div>`:''}`).join('')||'<div class="hint">Напишите сообщение клиента.</div>';
+  $('adminStatusHint').innerHTML=STATE.guestLiveResult?`Оператор отправил статус: ${esc(STATE.guestLiveResult.status)}${STATE.guestLiveResult.sub?' → '+esc(STATE.guestLiveResult.sub):''}`:(STATE.dialogActive?'Диалог активен.':'Диалог завершён.');
+  const can=STATE.dialogActive&&!STATE.guestLiveResult&&!!STATE.activeGuestId;
+  $('adminClientMsg').disabled=!can;$('adminSendClient').disabled=!can;
+  $('adminGuestResult').innerHTML=STATE.guestLiveResult?`Итог: <span class="status-pill">${esc(STATE.guestLiveResult.status)}</span>${STATE.guestLiveResult.sub?` <span class="status-pill sub">${esc(STATE.guestLiveResult.sub)}</span>`:''} · ${STATE.guestLiveResult.ts}`:'Оператор ещё не отправил статус.';
+}
+$('adminSendClient').onclick=()=>{const t=$('adminClientMsg').value.trim();if(!t)return;STATE.dialogLog.push({clientMsg:t,answer:null,ts:now()});$('adminClientMsg').value='';renderAdminTrain();};
+
+function renderAdminLinker(){
+  const cols = [
+    {key:'client', el:'adminLinkerClient', title:'Сообщение клиента'},
+    {key:'answer', el:'adminLinkerAnswer', title:'Ответ клиенту'},
+    {key:'status', el:'adminLinkerStatus', title:'Статус'},
+    {key:'sub', el:'adminLinkerSub', title:'Подстатус'}
+  ];
+  cols.forEach(col => {
+    const el = $(col.el);
+    el.innerHTML = '';
+    STATE.linker[col.key].forEach((it, i) => {
+      const d = document.createElement('div');
+      d.className = 'linker-item';
+      d.id = 'item-' + col.key + '-' + i;
+      d.style.padding = '4px';
+      d.innerHTML = `
+        <div style="position:absolute;top:2px;left:2px;z-index:2;width:16px;height:16px;background:var(--accent);color:#0f172a;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">${i+1}</div>
+        <span class="del" data-del-col="${col.key}" data-del-idx="${i}" style="top:2px;right:2px;z-index:2;">✕</span>
+        <textarea data-edit-col="${col.key}" data-edit-idx="${i}" style="min-height:40px;padding:4px;font-size:12px;border:none;background:transparent;">${esc(it.text)}</textarea>
+      `;
+      el.appendChild(d);
+    });
+  });
+  drawArrows('svgLayerAdmin');
+
+  document.querySelectorAll('[data-edit-col]').forEach(el => {
+    el.onchange = () => {
+      const col = el.dataset.editCol;
+      const idx = +el.dataset.editIdx;
+      STATE.linker[col][idx].text = el.value;
+    };
+  });
+  
+  document.querySelectorAll('[data-del-col]').forEach(el => {
+    el.onclick = () => {
+      const col = el.dataset.delCol;
+      const idx = +el.dataset.delIdx;
+      STATE.linker[col].splice(idx, 1);
+      STATE.linker.links = STATE.linker.links.filter(l => !(l.from === col && l.fromIdx === idx) && !(l.to === col && l.toIdx === idx));
+      renderAdminLinker();
+      renderGuestLinker();
+    };
+  });
+}
+$('addClientRow').onclick=()=>{STATE.linker.client.push({text:'Новое сообщение'});renderAdminLinker();renderGuestLinker();};
+$('addAnswerRow').onclick=()=>{STATE.linker.answer.push({text:'Новый ответ'});renderAdminLinker();renderGuestLinker();};
+$('addStatusRow').onclick=()=>{STATE.linker.status.push({text:'Новый статус'});renderAdminLinker();renderGuestLinker();};
+$('addSubRow').onclick=()=>{STATE.linker.sub.push({text:'Новый подстатус'});renderAdminLinker();renderGuestLinker();};
+
+function renderErrorEditor(){
+  const box = $('errorEditorList');
+  box.innerHTML = '';
+  STATE.errorTests.forEach((et, chatIdx) => {
+    const div = document.createElement('div');
+    div.className = 'chat-edit-box';
+    let chatRows = et.chat.map((m, i) => `
+      <div class="msg-edit-row">
+        <select data-err-chat-who="${chatIdx}-${i}"><option value="client" ${m.who==='client'?'selected':''}>Клиент</option><option value="operator" ${m.who==='operator'?'selected':''}>Оператор</option></select>
+        <input type="text" data-err-chat-text="${chatIdx}-${i}" value="${esc(m.text)}">
+        <button class="small danger" data-del-err-chat="${chatIdx}-${i}">✕</button>
+      </div>
+    `).join('');
+
+    let statusOpts = `<option value="">-- Выберите --</option>`;
+    let subOpts = `<option value="">-- Выберите --</option>`;
+    STATE.statuses.forEach(st => { statusOpts += `<option value="${st.label}" ${et.status===st.label?'selected':''}>${st.label}</option>`; });
+    const curSt = STATE.statuses.find(s => s.label === et.status);
+    if (curSt && curSt.subs) curSt.subs.forEach(sub => { subOpts += `<option value="${sub.label}" ${et.sub===sub.label?'selected':''}>${sub.label}</option>`; });
+
+    let errRows = (et.adminErrors || []).map((err, i) => `
+      <div class="row" style="margin-bottom:6px;">
+        <input type="text" data-admin-err-text="${chatIdx}-${i}" value="${esc(err)}" style="flex:1;">
+        <button class="small danger" data-del-admin-err="${chatIdx}-${i}">✕</button>
+      </div>
+    `).join('');
+
+    div.innerHTML = `
+      <div class="head"><b>Чат с ошибками ${chatIdx+1}</b><button class="small danger" data-del-err-chat-total="${chatIdx}">Удалить чат</button></div>
+      <label class="small">Переписка</label>
+      <div data-err-msgs="${chatIdx}">${chatRows}</div>
+      <button class="small ghost" data-add-err-msg="${chatIdx}" style="margin-bottom:10px;">+ Сообщение</button>
+      
+      <div class="row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
+        <div style="flex:1;"><label class="small">Статус закрытия</label><select data-err-status="${chatIdx}">${statusOpts}</select></div>
+        <div style="flex:1;"><label class="small">Подстатус</label><select data-err-sub="${chatIdx}">${subOpts}</select></div>
+      </div>
+
+      <label class="small" style="margin-top:10px;">Ошибки (галочки для оператора)</label>
+      <div data-err-list="${chatIdx}">${errRows}</div>
+      <button class="small ghost" data-add-admin-err="${chatIdx}">+ Ошибка</button>
+    `;
+    box.appendChild(div);
+  });
+
+  box.querySelectorAll('[data-del-err-chat-total]').forEach(b => b.onclick = () => {
+    if(STATE.errorTests.length <= 1) { alert('Хотя бы один чат'); return; }
+    if(!confirm('Удалить этот чат?')) return;
+    STATE.errorTests.splice(+b.dataset.delErrChatTotal, 1);
+    renderErrorEditor();
+  });
+  box.querySelectorAll('[data-err-chat-who]').forEach(s => s.onchange = () => { const [ci, mi] = s.dataset.errChatWho.split('-').map(Number); STATE.errorTests[ci].chat[mi].who = s.value; });
+  box.querySelectorAll('[data-err-chat-text]').forEach(inp => inp.onchange = () => { const [ci, mi] = inp.dataset.errChatText.split('-').map(Number); STATE.errorTests[ci].chat[mi].text = inp.value; });
+  box.querySelectorAll('[data-del-err-chat]').forEach(b => b.onclick = () => { const [ci, mi] = b.dataset.delErrChat.split('-').map(Number); STATE.errorTests[ci].chat.splice(mi, 1); renderErrorEditor(); });
+  box.querySelectorAll('[data-add-err-msg]').forEach(b => b.onclick = () => { const ci = +b.dataset.addErrMsg; STATE.errorTests[ci].chat.push({who:'client', text:'Новое сообщение'}); renderErrorEditor(); });
+
+  box.querySelectorAll('[data-err-status]').forEach(s => s.onchange = () => { const ci = +s.dataset.errStatus; STATE.errorTests[ci].status = s.value; STATE.errorTests[ci].sub = ''; renderErrorEditor(); });
+  box.querySelectorAll('[data-err-sub]').forEach(s => s.onchange = () => { const ci = +s.dataset.errSub; STATE.errorTests[ci].sub = s.value; });
+
+  box.querySelectorAll('[data-admin-err-text]').forEach(inp => inp.onchange = () => { const [ci, ei] = inp.dataset.adminErrText.split('-').map(Number); STATE.errorTests[ci].adminErrors[ei] = inp.value; });
+  box.querySelectorAll('[data-del-admin-err]').forEach(b => b.onclick = () => { const [ci, ei] = b.dataset.delAdminErr.split('-').map(Number); STATE.errorTests[ci].adminErrors.splice(ei, 1); renderErrorEditor(); });
+  box.querySelectorAll('[data-add-admin-err]').forEach(b => b.onclick = () => { const ci = +b.dataset.addAdminErr; STATE.errorTests[ci].adminErrors.push('Новая ошибка'); renderErrorEditor(); });
+}
+$('addErrorChatBtn').onclick = () => {
+  STATE.errorTests.push({ id: 'e' + Date.now(), chat: [{who:'client', text:'Новое сообщение'}], status: '', sub: '', adminErrors: ['Новая ошибка'], operatorAnswers: null });
+  renderErrorEditor();
+};
+
+function renderResults(){
+  const sel=$('resultsGuestSelect');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">Все операторы</option>';
+  const guests=Array.from(new Set(fbResults.map(r=>r.guestName)));
+  guests.forEach(g=>{sel.innerHTML+=`<option value="${esc(g)}">${esc(g)}</option>`;});
+  if(prev)sel.value=prev;
+  sel.onchange=renderResults;
+  
+  const filter=sel.value;
+  const box=$('resultsBody');box.innerHTML='';
+  const filtered=filter?fbResults.filter(r=>r.guestName===filter):fbResults;
+  if(!filtered.length){box.innerHTML='<div class="hint">Пока нет результатов.</div>';return;}
+  
+  const grouped = {};
+  filtered.forEach(r => {
+    if(!grouped[r.guestName]) grouped[r.guestName] = [];
+    grouped[r.guestName].push(r);
+  });
+
+  for(const guestName in grouped) {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `<h3 style="margin-top:0;">Оператор: <b>${esc(guestName)}</b></h3>`;
+    grouped[guestName].forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'result-task';
+      item.innerHTML = `
+        <div><b>${esc(r.taskTitle)}</b> <span class="hint">(${r.ts})</span></div>
+        <div style="margin-top:6px;">Статус: <span class="status-pill">${esc(r.status||'—')}</span> ${r.sub?` <span class="status-pill sub">${esc(r.sub)}</span>`:''}</div>
+        <div style="margin-top:6px;">Ответ оператора: <pre>${esc(r.answer)}</pre></div>
+      `;
+      card.appendChild(item);
+    });
+    box.appendChild(card);
+  }
+}
+
+$('resetAll').onclick=()=>{
+  if(!confirm('Сбросить ВСЁ, включая все задания и статусы?'))return;
+  STATE=structuredClone(DEFAULT_STATE);
+  fbResults = [];
+  db.ref('results').remove();
+  clearSession();
+  route();
+};
+
+// ==========================================
+// ФИНАЛЬНЫЙ ЗАПУСК
+// ==========================================
+route();
+</script>
+</body>
+</html>
