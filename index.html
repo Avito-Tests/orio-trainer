@@ -491,6 +491,13 @@ db.ref('grades').on('value', (snapshot) => {
   const s = getSession();
   if(s && s.role === 'admin') renderResults();
 });
+db.ref('live').on('value', (snapshot) => {
+  const data = snapshot.val() || {};
+  STATE.activeGuestId = data.activeGuestId || null;
+  STATE.dialogLog = data.dialogLog || {};
+  const s = getSession();
+  if(s && s.role === 'guest') renderGuestLive();
+});
 db.ref('queue').on('value', (snapshot) => {
   const data = snapshot.val();
   STATE.queue = data ? Object.values(data) : [];
@@ -655,7 +662,8 @@ $('guestCheckSend').onclick = () => {
 function renderGuestLive(){
   const isActive=STATE.activeGuestId===getSession()?.id;
   $('guestLiveStatus').innerHTML=isActive?'Сотрудник РИО выбрал вас. Пишите ответы.':'Ждёте, пока сотрудник РИО выберет вас в live.';
-  $('guestLiveChat').innerHTML=STATE.dialogLog.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Вы</span>${esc(d.answer)}<span class="time">${d.ats||''}</span></div>`:''}`).join('')||'<div class="hint">Ждём сообщения.</div>';
+  const logArr = Array.isArray(STATE.dialogLog) ? STATE.dialogLog : Object.values(STATE.dialogLog || {});
+$('guestLiveChat').innerHTML=logArr.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Вы</span>${esc(d.answer)}<span class="time">${d.ats||''}</span></div>`:''}`).join('')||'<div class="hint">Ждём сообщения.</div>';
   
   const sr=$('guestLiveStatuses'),sub=$('guestLiveSubStatuses');
   sr.innerHTML='';sub.innerHTML='';
@@ -705,14 +713,26 @@ function renderGuestLive(){
 $('guestSendReply').onclick=()=>{
   const t=$('guestReplyInput').value.trim();
   if(!t)return;
-  let target=null;
-  for(let i=STATE.dialogLog.length-1;i>=0;i--){
-    if(STATE.dialogLog[i].clientMsg&&!STATE.dialogLog[i].answer){target=STATE.dialogLog[i];break;}
+  
+  // Ищем в объекте сообщение клиента без ответа
+  let targetKey = null;
+  const log = STATE.dialogLog || {};
+  if (!Array.isArray(log)) {
+    const keys = Object.keys(log).sort((a,b) => (log[a].ts||'').localeCompare(log[b].ts||''));
+    for (let i = keys.length - 1; i >= 0; i--) {
+      const k = keys[i];
+      if (log[k].clientMsg && !log[k].answer) { targetKey = k; break; }
+    }
   }
-  if(target){target.answer=t;target.ats=now();}
-  else STATE.dialogLog.push({clientMsg:null,answer:t,ats:now(),ts:now()});
+  
+  if (targetKey) {
+    // 👇 Пишем ответ в Firebase
+    db.ref('live/dialogLog/' + targetKey + '/answer').set(t);
+    db.ref('live/dialogLog/' + targetKey + '/ats').set(now());
+  } else {
+    db.ref('live/dialogLog').push({clientMsg:null, answer:t, ats:now(), ts:now()});
+  }
   $('guestReplyInput').value='';
-  renderGuestLive();
 };
 
 $('guestSendResult').onclick=()=>{
@@ -1289,13 +1309,20 @@ function renderStatusEditor(){
 $('addStatusBtn').onclick=()=>{STATE.statuses.push({label:'Новый статус '+Date.now(),subs:[],bgColor:'#1e293b',txtColor:'#ffffff'});renderStatusEditor();};
 
 function renderAdminTrain(){
-  $('adminChat').innerHTML=STATE.dialogLog.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент (вы)</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Оператор</span>${esc(d.answer)}</div>`:''}`).join('')||'<div class="hint">Напишите сообщение клиента.</div>';
+  const logArr = Array.isArray(STATE.dialogLog) ? STATE.dialogLog : Object.values(STATE.dialogLog || {});
+$('adminChat').innerHTML=logArr.map(d=>`${d.clientMsg?`<div class="msg client"><span class="label">Клиент (вы)</span>${esc(d.clientMsg)}<span class="time">${d.ts||''}</span></div>`:''}${d.answer?`<div class="msg operator"><span class="label">Оператор</span>${esc(d.answer)}<span class="time">${d.ats||''}</span></div>`:''}`).join('')||'<div class="hint">Напишите сообщение клиента.</div>';
   $('adminStatusHint').innerHTML=STATE.guestLiveResult?`Оператор отправил статус: ${esc(STATE.guestLiveResult.status)}${STATE.guestLiveResult.sub?' → '+esc(STATE.guestLiveResult.sub):''}`:(STATE.dialogActive?'Диалог активен.':'Диалог завершён.');
   const can=STATE.dialogActive&&!STATE.guestLiveResult&&!!STATE.activeGuestId;
   $('adminClientMsg').disabled=!can;$('adminSendClient').disabled=!can;
   $('adminGuestResult').innerHTML=STATE.guestLiveResult?`Итог: <span class="status-pill">${esc(STATE.guestLiveResult.status)}</span>${STATE.guestLiveResult.sub?` <span class="status-pill sub">${esc(STATE.guestLiveResult.sub)}</span>`:''} · ${STATE.guestLiveResult.ts}`:'Оператор ещё не отправил статус.';
 }
-$('adminSendClient').onclick=()=>{const t=$('adminClientMsg').value.trim();if(!t)return;STATE.dialogLog.push({clientMsg:t,answer:null,ts:now()});$('adminClientMsg').value='';renderAdminTrain();};
+$('adminSendClient').onclick=()=>{
+  const t=$('adminClientMsg').value.trim();
+  if(!t)return;
+  // 👇 Отправляем напрямую в Firebase
+  db.ref('live/dialogLog').push({clientMsg:t, answer:null, ts:now()});
+  $('adminClientMsg').value='';
+};
 
 function renderAdminLinker(){
   const cols = [
