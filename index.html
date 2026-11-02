@@ -191,6 +191,19 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 </div>
 </div>
 </div>
+<div id="matchOtherPicker" class="hidden">
+<div class="row" style="justify-content:space-between;margin-bottom:10px;">
+<h3 style="margin:0;font-size:16px;color:var(--text);text-transform:none;">Прочие статусы</h3>
+<button class="ghost small" id="matchBackBtnOther">← К статусам</button>
+</div>
+<div class="linker-wrap" style="margin-top:14px">
+<svg id="svgLayerOther" class="layer"></svg>
+<div class="linker-grid" style="grid-template-columns: 1fr 1fr;">
+<div class="linker-col"><h4>Статусы</h4><div id="matchOtherLeft"></div></div>
+<div class="linker-col"><h4>Описания (перемешаны)</h4><div id="matchOtherRight"></div></div>
+</div>
+</div>
+</div>
 <button class="ok" id="guestSendMatch" style="margin-top:20px; width:100%;">Отправить соединения на проверку</button>
 </div>
 </section>
@@ -380,6 +393,29 @@ const DEFAULT_ERROR_TESTS = [
     status: 'Принято',
     sub: '',
     adminErrors: ['Не уточнил адрес', 'Не уточнил модель техники', 'Не уточнил возраст техники', 'Не сказал клиенту про время выезда'],
+    operatorAnswers: null
+  },
+  {
+    id: 'e2',
+    chat: [
+      {who:'client', text:'Здравствуйте! Когда будет мастер? Должен быть еще 30 мин назад'},
+      {who:'operator', text:'Здравствуйте! Уточните контактный телефон с которого вы обращались'},
+      {who:'client', text:'89990991122'}
+    ],
+    status: 'Принято',
+    sub: '',
+    adminErrors: ['Не уточнил адрес', 'Не извинился за задержку'],
+    operatorAnswers: null
+  },
+  {
+    id: 'e3',
+    chat: [
+      {who:'client', text:'Здравствуйте, нужна бригада из 3 человек, объем работ большой'},
+      {who:'operator', text:'Здравствуйте. Ожидайте связи пожалуйста, напарник уже выехал к вам'}
+    ],
+    status: 'Спам',
+    sub: 'Подрядчик',
+    adminErrors: ['Не уточнил, что это подрядчик', 'Сказал, что мастер выехал'],
     operatorAnswers: null
   }
 ];
@@ -831,7 +867,7 @@ function renderGuestMatch(){
     leftEl.innerHTML=''; rightEl.innerHTML='';
     otherStatuses.forEach((st,si)=>{
       const id='mol-'+si;
-      const isLinked = (STATE.matchLinks['other']||[]).find(l => l.status === st.label);
+      const isLinked = (STATE.matchLinks['other']||[]).find(l => l.sub === st.label);
       const d=document.createElement('div');
       d.className='linker-item'+(matchSel&&matchSel.id===id?' selected':'');
       d.id=id;
@@ -900,7 +936,8 @@ $('guestSendMatch').onclick=()=>{
       results.push({ status: statusLabel, sub: l.sub, correct: l.correct });
     });
   }
-    if(STATE.matchLinks['other']){
+  
+  if(STATE.matchLinks['other']){
     STATE.matchLinks['other'].forEach(l => {
       results.push({ status: l.sub, sub: '—', correct: l.correct });
     });
