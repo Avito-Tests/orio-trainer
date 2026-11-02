@@ -210,6 +210,7 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 <div class="tab" data-page="aP5">Статусы</div>
 <div class="tab" data-page="aP4">Лист</div>
 <div class="tab" data-page="aP6">Ошибки</div>
+<div class="tab" data-page="aP7">👥 Операторы</div>
 </div>
 <section class="page active" id="aP3"><div class="card">
 <h2>Результаты оператора</h2>
@@ -240,7 +241,7 @@ svg.layer{position:absolute;inset:0;pointer-events:none;z-index:1;width:100%;hei
 <button class="primary small" id="addSubRow">+ Подстатус</button>
 </div>
 </div></section>
-<section class="page" id="aP6"><div class="card"><h2>Ошибки (эталон)</h2><div id="errorEditorList"></div><button class="primary" id="addErrorChatBtn" style="margin-top:10px">+ Чат</button></div></section>
+<section class="page" id="aP6"><div class="card"><h2>Ошибки (эталон)</h2><div id="errorEditorList"></div><button class="primary" id="addErrorChatBtn" style="margin-top:10px">+ Чат</button></div></section> <section class="page" id="aP7"><div class="card"><h2>Операторы</h2><div id="operatorsList"></div></div></section>
 </div>
 </div>
 
@@ -599,6 +600,7 @@ function route(){
   if (s && s.role === 'guest') {
     $('guestName').textContent = s.name;
     db.ref('queue/'+s.id).set({id:s.id, first:s.name.split(' ')[0], last:s.name.split(' ')[1], login:s.login, since:Date.now()});
+    db.ref('progress/'+s.id+'/name').set(s.name);
     db.ref('queue/'+s.id).onDisconnect().remove();
     if (typeof renderAllGuest === 'function') renderAllGuest();
   }
@@ -1081,6 +1083,7 @@ $('guestSendErrors').onclick = async () => {
 function renderAdmin(){
   renderQueue();
   renderResults();
+  renderOperators();
   renderEditor();
   renderStatusEditor();
   renderAdminLinker();
@@ -1264,6 +1267,35 @@ async function saveGrades(guestId){
   alert('Оценки сохранены и отправлены оператору!');
   STATE.pendingGrades[guestId] = {};
   renderResults();
+}function renderOperators(){
+  const box = $('operatorsList'); if (!box) return;
+  box.innerHTML = '';
+  db.ref('users').once('value').then((snap) => {
+    const users = snap.val() || {};
+    const keys = Object.keys(users);
+    if (!keys.length) { box.innerHTML = '<div class="hint">Нет операторов.</div>'; return; }
+    keys.forEach(login => {
+      const u = users[login];
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.style = 'justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0;';
+      row.innerHTML = `<div><b>${esc(u.first)} ${esc(u.last)}</b> <span class="hint">(${esc(login)})</span></div>
+        <button class="small danger" data-del-user="${esc(login)}">Удалить</button>`;
+      box.appendChild(row);
+    });
+    box.querySelectorAll('[data-del-user]').forEach(b => {
+      b.onclick = async () => {
+        const login = b.dataset.delUser;
+        if (!confirm('Удалить оператора ' + login + ' и все его результаты?')) return;
+        await db.ref('users/' + login).remove();
+        await db.ref('progress/' + login).remove();
+        await db.ref('results/' + login).remove();
+        await db.ref('queue/' + login).remove();
+        alert('Оператор удалён');
+        renderOperators();
+      };
+    });
+  });
 }
 
 // ===== РЕДАКТОР ЧАТОВ =====
