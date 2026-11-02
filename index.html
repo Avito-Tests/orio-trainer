@@ -900,9 +900,9 @@ $('guestSendMatch').onclick=()=>{
       results.push({ status: statusLabel, sub: l.sub, correct: l.correct });
     });
   }
-  if(STATE.matchLinks['other']){
+    if(STATE.matchLinks['other']){
     STATE.matchLinks['other'].forEach(l => {
-      results.push({ status: l         results.push({ status: l.sub, sub: '—', correct: l.correct });
+      results.push({ status: l.sub, sub: '—', correct: l.correct });
     });
   }
   
